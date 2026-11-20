@@ -1,0 +1,3596 @@
+openapi: 3.0.3
+info:
+  title: CowHome API
+  description: REST API for the CowHome Smart Home Hub. Acts as a digital twin for FritzBox connected devices.
+  version: 0.0.1
+  contact:
+    name: Manuel Ziel
+    email: ManuelZiel@gmail.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: /api/v1
+    description: Current API Version
+
+tags:
+  - name: State & Devices
+    description: Core digital twin endpoints and FritzBox hardware device controls.
+  - name: Weather
+    description: Outdoor weather conditions and multi-day meteorological forecasts.
+  - name: System
+    description: FritzBox TR-064 router diagnostics, network presence, call logs, and storage metrics.
+  - name: History
+    description: Historical time-series sensor data queries in high-performance column-oriented format.
+  - name: Software Groups
+    description: Virtual device groupings managed exclusively within CowHome.
+  - name: Automation
+    description: Smart Home automation rules and engine configurations.
+  - name: Documentation
+    description: Interactive Swagger UI and OpenAPI 3.0 specification endpoints.
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: "Standard HTTP Bearer authentication per RFC 6750 (`Authorization: Bearer <YOUR_API_KEY>`). Also accepts `Authorization: ApiKey <YOUR_API_KEY>`."
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: "API Key passed via the `X-API-Key` HTTP header."
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: "Detailed error description"
+        code:
+          type: integer
+          example: 400
+          description: HTTP status code
+        data:
+          type: object
+          nullable: true
+          example: null
+
+    DeviceState:
+      type: object
+      required:
+        - ain
+        - name
+        - device_type
+        - present
+      properties:
+        ain:
+          type: string
+          example: "15282 0905546"
+          description: Unique FritzBox AIN or router identifier
+        name:
+          type: string
+          example: "Living Room Thermostat"
+          description: Display name (custom name or default)
+        device_type:
+          type: string
+          enum: [thermostat, thermostat_group, switch, sensor, router, generic]
+          example: thermostat
+        present:
+          type: boolean
+          example: true
+        product_name:
+          type: string
+          nullable: true
+          example: "FRITZ!Smart Control 440"
+          description: Hardware model name reported by the FritzBox
+        capabilities:
+          type: array
+          items:
+            type: string
+          example: ["thermostat", "temperature_sensor", "battery", "window_detection"]
+          description: Standardized capability identifiers supported by this device
+        group_ain:
+          type: string
+          nullable: true
+          example: "group-1"
+        group_id:
+          type: string
+          nullable: true
+          example: "group-1"
+          description: Software group identifier if assigned to a virtual group
+        automation_locked:
+          type: boolean
+          example: true
+          description: True if individual device automations are locked by a software group (Single Authority Pattern)
+        managed_by:
+          type: string
+          nullable: true
+          example: "Living Room"
+          description: Display name of the controlling software group for the UI badge
+        humidity:
+          type: number
+          nullable: true
+          example: 54.0
+          description: Current relative humidity in % (built-in or linked sensor)
+        dew_point_c:
+          type: number
+          nullable: true
+          example: 11.4
+          description: Indoor dew point temperature in °C calculated via WMO Magnus formula
+        abs_humidity_gm3:
+          type: number
+          nullable: true
+          example: 10.3
+          description: Indoor absolute humidity in g/m³
+        wall_surface_humidity_pct:
+          type: number
+          nullable: true
+          example: 68.2
+          description: Critical thermal-bridge interior wall surface relative humidity in % per DIN 4108-2 (f_Rsi = 0.70)
+        projected_base_humidity_pct:
+          type: number
+          nullable: true
+          example: 56.1
+          description: Projected indoor relative humidity in % if room cooled back to normal base/schedule target temperature T_base
+        humidity_guard_active:
+          type: boolean
+          example: false
+          description: True if HumidityControl v2 (Humidity Guard) is actively shielding the room temperature at T_guard
+        ventilation_advice:
+          type: string
+          nullable: true
+          enum: [none, ventilate_now, ventilate_marginal, do_not_ventilate_humid_outside]
+          example: none
+          description: Outdoor-aware ventilation recommendation based on indoor vs. outdoor absolute humidity delta
+        humidity_delta_outdoor_gm3:
+          type: number
+          nullable: true
+          example: 3.8
+          description: Absolute humidity difference (x_in - x_out) in g/m³ between indoor room air and outdoor air
+        last_updated:
+          type: string
+          format: date-time
+          example: "2026-10-12T19:30:00.000000"
+        temperature_current:
+          type: number
+          nullable: true
+          example: 21.0
+          description: Measured room temperature in °C (from linked reference sensor or internal sensor)
+        temperature_hardware:
+          type: number
+          nullable: true
+          example: 21.5
+          description: Local temperature in °C measured directly at the radiator valve
+        temperature_target:
+          type: number
+          example: 23.0
+          description: Desired user target room temperature in °C
+        hardware_target_temperature:
+          type: number
+          nullable: true
+          example: 23.5
+          description: Compensated target temperature in °C sent to the radiator valve
+        comfort_temperature:
+          type: number
+          nullable: true
+          example: 22.0
+          description: Backend-configured comfort preset temperature in °C
+        eco_temperature:
+          type: number
+          nullable: true
+          example: 18.0
+          description: Backend-configured eco/setback preset temperature in °C
+        temperature_offset:
+          type: number
+          nullable: true
+          example: 0.0
+          description: "CowHome backend static calibration offset in °C (-5.0 to +5.0 in 0.5 °C steps, default 0.0) for standalone thermostats without an external room sensor, or sensor offset for climate sensors"
+        fritz_temperature_offset:
+          type: number
+          nullable: true
+          example: 0.0
+          description: "Internal FRITZ!Box hardware offset in °C reported by AHA XML <temperature><offset> (expected 0.0 °C per Single Source of Calibration; if != 0.0 °C, CowHome blocks static offset compensation and emits a fritz_offset_active alert)"
+        apparent_temperature:
+          type: number
+          nullable: true
+          example: 21.8
+          description: Calculated feels-like room temperature in °C
+        reference_sensor_ain:
+          type: string
+          nullable: true
+          example: "13979 0123456"
+          description: Assigned external climate sensor AIN (e.g. FRITZ!Smart Control 440)
+        battery_level:
+          type: integer
+          nullable: true
+          example: 85
+          description: Battery level percentage (0-100)
+        battery_low:
+          type: boolean
+          example: false
+          description: True if low battery warning flag is active
+        window_open:
+          type: boolean
+          example: false
+          description: Open window detection active
+        boost_active:
+          type: boolean
+          example: false
+          description: Rapid heating boost mode active
+        preheat_active:
+          type: boolean
+          example: false
+          description: True if AdaptiveStart (Pre-Heat) is actively pre-heating the thermostat before an upcoming Comfort schedule block
+        preheat_target_temp:
+          type: number
+          nullable: true
+          example: 22.0
+          description: Target comfort temperature in °C of the upcoming HeatingSchedule block while preheat_active is true (null otherwise)
+        preheat_target_time:
+          type: string
+          nullable: true
+          example: "16:00"
+          description: Local HH:MM start time (in home IANA timezone) of the upcoming HeatingSchedule comfort block while preheat_active is true (null otherwise)
+        preheat_paused_reason:
+          type: string
+          nullable: true
+          enum:
+            - vacation_mode
+            - summer_pause
+            - auto_away
+            - window_open
+            - manual_override
+          example: null
+          description: Authoritative rule-arbitration reason why Pre-Heat is currently paused/suppressed in an active Pre-Heat scope (null during normal operation or when Pre-Heat is disabled; aggregated as first non-null onto thermostat_group entities)
+        error_code:
+          type: integer
+          example: 0
+          description: "Numeric AVM HKR radiator valve error code (0 = OK, 1 = Valve adaptation failed, 2 = Valve stroke too short / battery weak, 3 = No valve movement possible / pin stuck, 4 = Preparing valve adaptation, 5 = Installation mode active, 6 = Adapting to radiator valve stroke)"
+        error_description:
+          type: string
+          example: "OK (No error)"
+          description: "Human-readable AVM HKR radiator valve error description matching error_code (0-6)"
+        last_pressed:
+          type: integer
+          nullable: true
+          example: 1728922800
+          description: Unix timestamp of most recent button press (wall switch / sensor)
+        state:
+          type: boolean
+          example: true
+          description: Switch state - ON (true) or OFF (false)
+        power_current:
+          type: number
+          example: 12.4
+          description: Switch current power consumption in Watts
+        energy_total:
+          type: number
+          example: 15420.0
+          description: Switch total energy consumed in Wh
+        voltage:
+          type: number
+          example: 230.4
+          description: Switch current line voltage in Volts
+
+    CurrentWeather:
+      type: object
+      properties:
+        temperature:
+          type: number
+          nullable: true
+          example: 14.5
+          description: Measured outdoor temperature in °C
+        apparent_temperature:
+          type: number
+          nullable: true
+          example: 13.2
+          description: Perceived outdoor temperature in °C
+        humidity:
+          type: integer
+          nullable: true
+          example: 68
+          description: Relative outdoor humidity in %
+        dew_point_c:
+          type: number
+          nullable: true
+          example: 8.6
+          description: Outdoor dew point temperature in °C calculated via WMO Magnus formula
+        abs_humidity_gm3:
+          type: number
+          nullable: true
+          example: 8.48
+          description: Outdoor absolute humidity in g/m³
+        wind_speed:
+          type: number
+          nullable: true
+          example: 12.5
+          description: Wind speed at 10m height in km/h
+        weather_code:
+          type: integer
+          example: 3
+          description: WMO weather interpretation code (0-99)
+        weather_description:
+          type: string
+          example: "Overcast"
+          description: Human-readable weather description
+        is_day:
+          type: integer
+          enum: [0, 1]
+          example: 1
+          description: Day (1) or night (0) indicator for UI theme icon selection
+
+    HourlyForecast:
+      type: object
+      properties:
+        time:
+          type: string
+          example: "18:00"
+          description: Forecast time slot label (HH:MM)
+        temperature:
+          type: number
+          nullable: true
+          example: 15.0
+          description: Forecasted temperature in °C
+        weather_code:
+          type: integer
+          example: 3
+          description: WMO weather code (0-99)
+        weather_description:
+          type: string
+          example: "Overcast"
+          description: Forecasted weather description
+
+    DailyForecast:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2026-10-15"
+          description: Forecast date in YYYY-MM-DD
+        weather_code:
+          type: integer
+          example: 2
+          description: WMO weather code (0-99)
+        weather_description:
+          type: string
+          example: "Partly cloudy"
+          description: Forecasted weather description
+        temp_max:
+          type: number
+          nullable: true
+          example: 18.2
+          description: Maximum daily temperature in °C
+        temp_min:
+          type: number
+          nullable: true
+          example: 9.1
+          description: Minimum daily temperature in °C
+        sunrise:
+          type: string
+          nullable: true
+          example: "2026-10-15T07:15"
+          description: Sunrise time in ISO-8601 format
+        sunset:
+          type: string
+          nullable: true
+          example: "2026-10-15T18:45"
+          description: Sunset time in ISO-8601 format
+
+    WeatherData:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "online"
+          description: Weather service operational status (online, loading, error)
+        last_update:
+          type: number
+          nullable: true
+          example: 1728922800.0
+          description: Unix timestamp of the last weather update
+        timezone:
+          type: string
+          example: "Europe/Berlin"
+          description: Resolved IANA timezone for the home coordinates (used for schedule and forecast evaluation)
+        current:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/CurrentWeather'
+        hourly:
+          type: array
+          items:
+            $ref: '#/components/schemas/HourlyForecast'
+        daily:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyForecast'
+
+    SoftwareGroup:
+      type: object
+      required:
+        - id
+        - name
+        - members
+      properties:
+        id:
+          type: string
+          example: "1"
+          description: Unique software group identifier
+        name:
+          type: string
+          example: "Living Room"
+          description: Display name of the software group
+        members:
+          type: array
+          items:
+            type: string
+          example: ["15282 0905546", "15282 0905547"]
+          description: List of device AINs belonging to this group
+        automation:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/AutomationFeatureConfig'
+          description: Complete automation configuration for all 7 features in this group scope
+        ignored_stale:
+          type: boolean
+          example: false
+          description: True if a group update was ignored because its client_timestamp was older than the last applied mutation (Last-Write-Wins)
+
+    WeatherSmartHeatingConfig:
+      type: object
+      description: 'Configuration for WeatherSmartHeating (UI display name: "Summer Pause").'
+      properties:
+        outdoor_temp_threshold:
+          type: number
+          default: 16.0
+          example: 16.0
+          description: Outdoor temperature threshold (°C) above which heating is lowered during the configured season window
+        start_date:
+          type: string
+          default: "05-01"
+          example: "05-01"
+          description: Season start date in MM-DD format (inclusive)
+        end_date:
+          type: string
+          default: "09-30"
+          example: "09-30"
+          description: Season end date in MM-DD format (inclusive)
+        affected_devices:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Target device AINs (auto-populated for group/device scopes)
+
+    HumidityControlConfig:
+      type: object
+      description: 'Configuration for HumidityControl v2 (UI display name: "Mold & Humidity Guard", DIN 4108-2 thermal bridge protection & outdoor psychrometric comparison).'
+      properties:
+        sensor_ain:
+          type: string
+          default: ""
+          example: "11630 0123456"
+          description: Optional reference humidity sensor AIN in the room (e.g. FRITZ!Smart Control 440 / FRITZ!Smart Temp 30)
+        actor_ain:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Thermostat AINs controlled on sustained humidity (auto-populated for group/device scopes)
+        humidity_threshold:
+          type: number
+          minimum: 40.0
+          maximum: 90.0
+          default: 60.0
+          example: 60.0
+          description: Relative humidity threshold (%) triggering Humidity Guard evaluation (40.0 to 90.0 %)
+        max_temp_boost_c:
+          type: number
+          minimum: 0.0
+          maximum: 4.0
+          default: 2.0
+          example: 2.0
+          description: Maximum temperature boost (°C) above normal baseline/schedule target temperature T_base (0.0 to 4.0 °C; 0.0 °C = Alert only mode without heating boost)
+
+    VacationModeConfig:
+      type: object
+      description: 'Configuration for VacationMode (UI display name: "Vacation Mode" for global scope, "Frost Guard" for group/device scope).'
+      properties:
+        end_date_timestamp:
+          type: number
+          default: 0.0
+          example: 1729200000.0
+          description: UNIX timestamp of scheduled return (0 = indefinite)
+        frost_protection_temp:
+          type: number
+          default: 8.0
+          example: 8.0
+          description: Vacation setback temperature (°C)
+        pre_heat_hours:
+          type: integer
+          default: 6
+          example: 6
+          description: Hours before end_date_timestamp to deactivate vacation setback
+        ignored_groups:
+          type: array
+          items:
+            type: string
+          default: []
+          example: ["group-2"]
+          description: Software group IDs excluded from vacation setback
+        ignored_devices:
+          type: array
+          items:
+            type: string
+          default: []
+          example: ["15282 0905599"]
+          description: Individual device AINs excluded from vacation setback
+
+    ApparentTemperatureConfig:
+      type: object
+      description: 'Configuration for ApparentTemperature (UI display name: "Room Sensor Sync").'
+      properties:
+        sensor_ain:
+          type: string
+          default: ""
+          example: "15282 0959343"
+          description: External room climate sensor AIN for group/device scope (e.g. FRITZ!Smart Control 440)
+        sensor_mapping:
+          type: object
+          additionalProperties:
+            type: string
+          default: {}
+          description: Mapping of thermostat AIN to external climate sensor AIN (for global scope)
+        active_offset_control:
+          type: boolean
+          default: true
+          example: true
+          description: When true, performs Dynamic Target Offset Compensation so valves heat until the room sensor reaches temperature_target
+        max_offset:
+          type: number
+          default: 4.0
+          example: 4.0
+          description: Maximum allowed valve temperature offset in °C above/below desired target temperature
+
+    HeatingTimeSlot:
+      type: object
+      required:
+        - start
+        - end
+      properties:
+        start:
+          type: string
+          example: "06:00"
+          description: Slot start time in HH:MM format (30-minute resolution, 00:00 to 23:30)
+        end:
+          type: string
+          example: "08:30"
+          description: Slot end time in HH:MM format (30-minute resolution, 00:30 to 24:00)
+        temp:
+          type: number
+          example: 22.0
+          description: Target comfort temperature (°C) during this slot for thermostats (defaults to comfort_temp if omitted; for switches any value > 0 means ON)
+        state:
+          type: boolean
+          example: true
+          description: Optional explicit switch state (true = ON, false = OFF) when used as a Power Schedule for smart plugs
+
+    HeatingScheduleConfig:
+      type: object
+      description: 'Configuration for HeatingSchedule (UI display name: "Heating Schedule" for thermostats / "Power Schedule" for smart plugs), including optional integrated Pre-Heat (fully automatic Optimum Start Control per DIN EN 12098-1 / EN 15232).'
+      properties:
+        eco_temp:
+          type: number
+          default: 18.0
+          example: 18.0
+          description: Base setback temperature (°C) outside active heating blocks
+        comfort_temp:
+          type: number
+          default: 22.0
+          example: 22.0
+          description: Default comfort temperature (°C) when a time slot omits 'temp'
+        preheat_enabled:
+          type: boolean
+          default: false
+          example: true
+          description: Enables integrated Pre-Heat (fully automatic Optimum Start Control with outdoor-temperature-compensated thermal inertia per DIN EN 12098-1, internal safety cap 180 min, deadband delta_T >= 0.5 K; bidirectionally synchronized with AdaptiveStart in the same scope)
+        affected_devices:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Target thermostat or switch AINs (auto-populated for group/device scopes)
+        days:
+          type: object
+          properties:
+            mon:
+              type: array
+              items:
+                $ref: '#/components/schemas/HeatingTimeSlot'
+            tue:
+              type: array
+              items:
+                $ref: '#/components/schemas/HeatingTimeSlot'
+            wed:
+              type: array
+              items:
+                $ref: '#/components/schemas/HeatingTimeSlot'
+            thu:
+              type: array
+              items:
+                $ref: '#/components/schemas/HeatingTimeSlot'
+            fri:
+              type: array
+              items:
+                $ref: '#/components/schemas/HeatingTimeSlot'
+            sat:
+              type: array
+              items:
+                $ref: '#/components/schemas/HeatingTimeSlot'
+            sun:
+              type: array
+              items:
+                $ref: '#/components/schemas/HeatingTimeSlot'
+          default: {}
+          description: Weekday-mapped heating time slots ('mon' through 'sun') in 30-minute intervals
+
+    AdaptiveStartConfig:
+      type: object
+      description: 'Configuration for AdaptiveStart (UI display name: "Pre-Heat"). Automatically pre-heats upcoming comfort blocks from the active HeatingSchedule in the same scope using the dead-time-filtered and outdoor-temperature-compensated room heating rate (bidirectionally synchronized with HeatingSchedule.preheat_enabled).'
+      properties:
+        target_ain:
+          type: string
+          default: ""
+          example: "15282 0905546"
+          description: Single target thermostat AIN
+        target_ains:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Target thermostat AINs (auto-populated for group/device scopes)
+        target_time_cron:
+          type: string
+          default: "07:00"
+          example: "06:30"
+          description: Legacy fallback field (actual pre-heat target time is resolved automatically from the active HeatingSchedule in the same scope)
+        target_temp:
+          type: number
+          default: 22.0
+          example: 23.0
+          description: Legacy fallback field (actual pre-heat target temperature is resolved automatically from the active HeatingSchedule in the same scope)
+        presence_schedule:
+          type: object
+          default: {}
+          description: Optional per-weekday schedule overrides
+
+    PresenceProfilingConfig:
+      type: object
+      description: 'Configuration for PresenceProfiling (UI display name: "Auto-Away").'
+      properties:
+        tracked_mac_addresses:
+          type: array
+          items:
+            type: string
+          default: []
+          example: ["AA:BB:CC:DD:EE:FF"]
+          description: Tracked Wi-Fi/LAN MAC addresses for this zone/scope
+        affected_devices:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Target thermostat AINs controlled by presence in this scope
+        away_temp_offset:
+          type: number
+          default: -3.0
+          example: -3.0
+          description: Temperature setback offset (K) or absolute setback (°C if >= 5.0)
+        timeout_minutes:
+          type: integer
+          default: 15
+          example: 15
+          description: Minutes without detected MAC before applying setback
+        learning_mode_only:
+          type: boolean
+          default: true
+          example: true
+          description: If true, records presence probabilities without applying temperature setbacks
+
+    AutomationFeatureConfig:
+      type: object
+      required:
+        - is_active
+        - config
+      properties:
+        is_active:
+          type: boolean
+          example: true
+          description: Whether this automation feature is currently enabled
+        config:
+          type: object
+          anyOf:
+            - $ref: '#/components/schemas/WeatherSmartHeatingConfig'
+            - $ref: '#/components/schemas/HumidityControlConfig'
+            - $ref: '#/components/schemas/VacationModeConfig'
+            - $ref: '#/components/schemas/ApparentTemperatureConfig'
+            - $ref: '#/components/schemas/HeatingScheduleConfig'
+            - $ref: '#/components/schemas/AdaptiveStartConfig'
+            - $ref: '#/components/schemas/PresenceProfilingConfig'
+          example:
+            outdoor_temp_threshold: 16.0
+            affected_devices: ["15282 0905546"]
+          description: Feature-specific configuration parameters
+
+    HeatingForecast:
+      type: object
+      description: 5-Day Heating Outlook (VDI 2067 / VDI 3807 / ISO 15927-6 Heating Degree Days) combining the 5-day Open-Meteo weather forecast, active HeatingSchedule/SummerPause/VacationMode rules, and the learned 7d room thermal demand signature.
+      properties:
+        trend_direction:
+          type: string
+          enum: [rising, falling, stable]
+          example: rising
+          description: Expected 5-day heating load trend compared to the past 7 days ('stable' when |delta| < 5.0% or < 10.0 min/d)
+        trend_delta_percent:
+          type: number
+          example: 22.0
+          description: Clamped percentage change (-100.0% to +200.0%) of expected daily heating demand compared to the 7-day baseline
+        projected_daily_heating_minutes:
+          type: number
+          example: 145.0
+          description: Estimated active heating duration in minutes per day (min/d) over the next 5 forecast days under current settings
+        potential_schedule_savings_percent:
+          type: number
+          example: 12.0
+          description: Estimated additional energy savings (%) according to VDI 2067 (6%/K, max 30%) achievable by enabling or optimizing a HeatingSchedule and comfort temperature
+        baseline_daily_heating_minutes:
+          type: number
+          example: 118.8
+          description: Historical average daily active heating duration (min/d) over the 7-day reference window
+        avg_forecast_outdoor_temp:
+          type: number
+          example: 5.2
+          description: Mean forecasted outdoor temperature (°C) across the next 5 days
+        avg_scheduled_target_temp:
+          type: number
+          example: 20.5
+          description: Time-weighted daily target temperature (°C) across the next 5 days considering active schedules, Summer Pause, and Vacation Mode
+        forecast_days:
+          type: integer
+          example: 5
+          description: Number of evaluated meteorological forecast days
+
+    HeatingEfficiency:
+      type: object
+      description: 4-factor Thermal Heating Efficiency Score calculated from indoor/target/outdoor temperatures, recovery ramps, and 5-day heating outlook.
+      properties:
+        score:
+          type: number
+          example: 0.88
+          description: Normalized composite efficiency score (0.0 to 1.0)
+        score_percent:
+          type: integer
+          example: 88
+          description: Composite efficiency score in percent (0 to 100)
+        heating_demand_minutes:
+          type: number
+          example: 165.0
+          description: Active heating demand duration in minutes within the evaluated window (filtered for boiler dead-time > 25 min without water circulation via temperature_hardware)
+        daily_heating_minutes:
+          type: number
+          example: 165.0
+          description: Time-normalized average daily active heating duration in minutes per day within the evaluated window (round(heating_demand_minutes / observed_days, 1))
+        observed_days:
+          type: number
+          example: 1.0
+          description: Actual integrated online observation span in days within the evaluated window (round(max(1.0, integrated_seconds / 86400.0), 2))
+        avg_indoor_temp:
+          type: number
+          example: 20.8
+          description: Time-weighted average indoor temperature (°C)
+        avg_target_temp:
+          type: number
+          example: 20.1
+          description: Time-weighted average target temperature (°C)
+        avg_outdoor_temp:
+          type: number
+          example: 6.5
+          description: Time-weighted average outdoor temperature (°C) from WEATHER_01
+        estimated_savings_percent:
+          type: number
+          example: 11.4
+          description: "Estimated energy savings (%) from setback schedules (VDI 2067: ~6% per 1 K setback)"
+        heating_rate_min_per_c:
+          type: number
+          example: 25.0
+          description: Learned base thermal heating rate in minutes per 1 °C temperature rise (accumulated over >= 0.5 °C / 0.3 °C ramps within 15.0–120.0 min/°C, plateau-stable and filtered for boiler dead-time via temperature_hardware in the requested window)
+        effective_heating_rate_min_per_c:
+          type: number
+          example: 32.5
+          description: Weather-compensated effective room heating inertia in minutes per 1 °C (r_eff = clamp(r_base * f_out, 15.0, 120.0) per DIN EN 12098-1 with +2.5%/K outdoor temperature inertia compensation)
+        heating_rate_c_per_hour:
+          type: number
+          example: 1.8
+          description: Weather-compensated room heating speed indicator in °C per hour (round(60.0 / effective_heating_rate_min_per_c, 1), e.g. '+1.8 °C/h')
+        overshoot_minutes:
+          type: number
+          example: 0.0
+          description: Minutes where indoor temperature exceeded target + 0.5 °C during active heating
+        window_open_minutes:
+          type: number
+          example: 0.0
+          description: Minutes where window_open was active while target temperature was above frost protection
+        trend_direction:
+          type: string
+          enum: [rising, falling, stable]
+          example: rising
+          description: 5-day heating demand trend direction ('rising', 'falling', 'stable')
+        trend_delta_percent:
+          type: number
+          example: 22.0
+          description: Percentage change (-100.0% to +200.0%) of projected 5-day heating demand vs. 7-day baseline
+        projected_daily_heating_minutes:
+          type: number
+          example: 145.0
+          description: Estimated daily active heating duration (min/d) for the next 5 forecast days
+        potential_schedule_savings_percent:
+          type: number
+          example: 12.0
+          description: Estimated additional savings potential (%) from enabling/optimizing HeatingSchedule
+        heating_forecast:
+          nullable: true
+          description: Detailed 5-day heating outlook and savings potential object
+          allOf:
+            - $ref: '#/components/schemas/HeatingForecast'
+        factors:
+          type: object
+          properties:
+            demand_score:
+              type: number
+              example: 0.92
+            setback_score:
+              type: number
+              example: 0.85
+            recovery_score:
+              type: number
+              example: 0.90
+            precision_score:
+              type: number
+              example: 1.0
+
+    EnergyForecast:
+      type: object
+      description: Time-span normalized 30-day and 365-day electricity consumption and cost projection (IEC 62053 / ISO 4217).
+      properties:
+        daily_avg_kwh:
+          type: number
+          example: 0.38
+          description: Time-normalized average daily energy consumption in kWh/day (normalized over actual observed duration up to 30 days)
+        projected_month_kwh:
+          type: number
+          example: 11.4
+          description: Projected 30-day energy consumption in kWh (daily_avg_kwh * 30)
+        projected_month_cost_eur:
+          type: number
+          example: 3.99
+          description: Projected 30-day electricity cost in EUR (includes +electricity_base_fee_eur_per_month for house-wide 'device' = 'house' summaries)
+        projected_year_kwh:
+          type: number
+          example: 138.7
+          description: Projected 365-day energy consumption in kWh (daily_avg_kwh * 365)
+        projected_year_cost_eur:
+          type: number
+          example: 48.55
+          description: Projected 365-day electricity cost in EUR (includes +electricity_base_fee_eur_per_month * 12 for house-wide 'device' = 'house' summaries)
+        trend_direction:
+          type: string
+          enum: [rising, falling, stable]
+          example: stable
+          description: Consumption trend comparing 7d daily rate vs 30d daily rate ('stable' when |delta| < 5.0% or < 0.05 kWh/d)
+        trend_delta_percent:
+          type: number
+          example: 0.0
+          description: Clamped percentage change (-100.0% to +200.0%) of 7d daily consumption rate vs 30d baseline
+
+    EnergySummary:
+      type: object
+      description: Historical energy consumption (today since 00:00 local time, 7d, 30d, 365d) and cost projections for smart switches with power_meter capability (e.g. FRITZ!DECT 200/210, FRITZ!Smart Energy 250). For house-wide summaries ('device' = 'house'), dedicated non-switchable main electricity meters (e.g. FRITZ!Smart Energy 250) take authoritative priority so downstream smart plugs are not double-counted, and the monthly base fee (electricity_base_fee_eur_per_month) is prorated into today (+base_fee/30), week (+base_fee*7/30), month/projected_month (+base_fee), and year/projected_year (+base_fee*12) costs.
+      properties:
+        device:
+          type: string
+          example: "11630 0114733"
+          description: Device AIN, software group ID ('group-<id>'), or 'house' for house-wide summary
+        device_count:
+          type: integer
+          example: 2
+          description: Number of aggregated smart switches (present for group or house-wide summaries)
+        electricity_price_eur_per_kwh:
+          type: number
+          example: 0.35
+          description: Configured electricity tariff in EUR/kWh
+        electricity_base_fee_eur_per_month:
+          type: number
+          example: 12.50
+          description: Configured monthly electricity base fee in EUR/month (0.00 to 500.00 EUR/month; prorated only into house-wide 'device' = 'house' cost fields)
+        currency:
+          type: string
+          example: EUR
+          description: ISO 4217 currency code
+        power_current_w:
+          type: number
+          example: 42.5
+          description: Current active power draw in Watts (W)
+        energy_total_wh:
+          type: number
+          example: 15420.0
+          description: Cumulative hardware counter reading in Watt-hours (Wh)
+        energy_total_kwh:
+          type: number
+          example: 15.42
+          description: Cumulative hardware counter reading in kilowatt-hours (kWh)
+        today_kwh:
+          type: number
+          example: 0.42
+          description: Energy consumed today since 00:00:00 local time (home IANA timezone) in kWh
+        today_cost_eur:
+          type: number
+          example: 0.15
+          description: Electricity cost today since 00:00:00 local time in EUR (includes +base_fee/30 for 'device' = 'house')
+        week_kwh:
+          type: number
+          example: 2.85
+          description: Energy consumed over the last 7 days in kWh
+        week_cost_eur:
+          type: number
+          example: 1.00
+          description: Electricity cost over the last 7 days in EUR (includes +base_fee*7/30 for 'device' = 'house')
+        month_kwh:
+          type: number
+          example: 11.40
+          description: Energy consumed over the last 30 days in kWh
+        month_cost_eur:
+          type: number
+          example: 3.99
+          description: Electricity cost over the last 30 days in EUR (includes +base_fee for 'device' = 'house')
+        year_kwh:
+          type: number
+          example: 124.50
+          description: Energy consumed over the last 365 days in kWh
+        year_cost_eur:
+          type: number
+          example: 43.58
+          description: Electricity cost over the last 365 days in EUR (includes +base_fee*12 for 'device' = 'house')
+        daily_avg_kwh:
+          type: number
+          example: 0.38
+          description: Time-normalized average daily consumption in kWh/day
+        projected_month_kwh:
+          type: number
+          example: 11.40
+          description: Projected 30-day energy consumption in kWh
+        projected_month_cost_eur:
+          type: number
+          example: 3.99
+          description: Projected 30-day electricity cost in EUR (includes +base_fee for 'device' = 'house')
+        projected_year_kwh:
+          type: number
+          example: 138.70
+          description: Projected 365-day energy consumption in kWh
+        projected_year_cost_eur:
+          type: number
+          example: 48.55
+          description: Projected 365-day electricity cost in EUR (includes +base_fee*12 for 'device' = 'house')
+        trend_direction:
+          type: string
+          enum: [rising, falling, stable]
+          example: stable
+        trend_delta_percent:
+          type: number
+          example: 0.0
+        forecast:
+          $ref: '#/components/schemas/EnergyForecast'
+
+    DiagnosticsAlert:
+      type: object
+      description: Active hardware or subsystem alert surfaced without normal-operation log noise.
+      required:
+        - severity
+        - category
+        - code
+        - message
+      properties:
+        severity:
+          type: string
+          enum: [warning, error]
+          example: error
+        category:
+          type: string
+          enum: [device, system, adapter]
+          example: device
+        code:
+          type: string
+          example: valve_error_3
+          description: "Machine-readable alert identifier (e.g. 'device_offline', 'battery_low', 'valve_error_1'..'valve_error_6', 'fritz_offset_active', 'database_unhealthy', 'storage_space_low', 'systemd_service_degraded', 'weather_service_degraded')"
+        device:
+          type: string
+          nullable: true
+          example: "15282 0905546"
+          description: Affected device AIN or None for system-wide alerts
+        name:
+          type: string
+          nullable: true
+          example: "Living Room Thermostat"
+          description: Human-readable device or subsystem name
+        error_code:
+          type: integer
+          nullable: true
+          example: 3
+          description: Numeric AVM valve error code (present for valve_error_* alerts)
+        error_description:
+          type: string
+          nullable: true
+          example: "No valve movement possible (Valve pin stuck?)"
+          description: Human-readable AVM valve error description (present for valve_error_* alerts)
+        battery_level:
+          type: integer
+          nullable: true
+          example: 10
+          description: Battery percentage (present for battery_low alerts)
+        fritz_temperature_offset:
+          type: number
+          nullable: true
+          example: -1.5
+          description: Active internal FRITZ!Box hardware offset in °C (present for fritz_offset_active alerts)
+        message:
+          type: string
+          example: "Thermostat 'Living Room Thermostat' (15282 0905546) valve error 3: No valve movement possible (Valve pin stuck?)"
+
+    DiagnosticsReport:
+      type: object
+      description: Standardized 5-block read-only AI and system diagnostics report (Universal Diagnostics Schema v1.0). All secrets and credentials are recursively redacted with '**REDACTED**'.
+      required:
+        - schema_version
+        - status
+        - meta
+        - config_sanitized
+        - health_checks
+        - active_alerts
+        - domain_diagnostics
+        - recent_errors
+        - recent_logs
+      properties:
+        schema_version:
+          type: string
+          example: "1.0"
+          description: Universal Diagnostics Schema version
+        status:
+          type: string
+          enum: [pass, warn, fail]
+          example: pass
+          description: Overall health status (IETF Health Check Draft envelope)
+        meta:
+          type: object
+          description: "Block 1: Service identity, UTC and IANA home-timezone timestamps, and runtime environment metadata."
+          properties:
+            software:
+              type: string
+              example: CowHome
+            version:
+              type: string
+              example: "0.0.1"
+            syslog_identifier:
+              type: string
+              example: cowhome
+            generated_at_utc:
+              type: string
+              format: date-time
+              example: "2026-10-27T18:30:00+00:00"
+            generated_at_local:
+              type: string
+              format: date-time
+              example: "2026-10-27T19:30:00+01:00"
+              description: Local timestamp in the home IANA timezone used by HeatingSchedule and AdaptiveStart.
+            timezone_iana:
+              type: string
+              example: Europe/Berlin
+            os_timezone:
+              type: string
+              example: CET
+            uptime_seconds:
+              type: number
+              example: 86412.4
+            daemon_mode:
+              type: boolean
+              example: true
+            live_memory_attached:
+              type: boolean
+              example: true
+              description: True when reading directly from the running daemon's in-memory StateRegistry and RulesEngine.
+            arch:
+              type: string
+              example: "x86_64"
+              description: Target CPU architecture of the compiled single binary (e.g. 'x86_64' or 'aarch64').
+            requested_range:
+              type: string
+              example: "24h"
+            device_filter:
+              type: string
+              nullable: true
+              example: null
+        config_sanitized:
+          type: object
+          description: "Block 2: Complete application configuration (TOML) with all secrets, passwords, API keys, and tokens recursively replaced by '**REDACTED**'."
+        health_checks:
+          type: object
+          description: "Block 3: Subsystem health checks (SQLite database, host disk storage, systemd unit state, weather service, and 2-tier RateLimiter)."
+          properties:
+            database:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pass, warn, fail]
+                attached:
+                  type: boolean
+                  example: true
+                db_size_mb:
+                  type: number
+                wal_size_mb:
+                  type: number
+                db_size_bytes:
+                  type: integer
+                wal_size_bytes:
+                  type: integer
+                total_size_human:
+                  type: string
+                history_records_count:
+                  type: integer
+                entities_count:
+                  type: integer
+                row_counts:
+                  type: object
+                  additionalProperties:
+                    type: integer
+                  properties:
+                    entities:
+                      type: integer
+                    state_history:
+                      type: integer
+                    automation_config:
+                      type: integer
+                    device_custom_names:
+                      type: integer
+                    presence_history:
+                      type: integer
+                    software_groups:
+                      type: integer
+                    software_group_members:
+                      type: integer
+                    system_settings:
+                      type: integer
+                oldest_record:
+                  type: string
+                  nullable: true
+                newest_record:
+                  type: string
+                  nullable: true
+            storage:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pass, warn, fail]
+                free_gb:
+                  type: number
+                used_percent:
+                  type: number
+                disk_free_bytes:
+                  type: integer
+                disk_free_human:
+                  type: string
+                disk_used_percent:
+                  type: number
+            systemd_service:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pass, warn, fail]
+                active_state:
+                  type: string
+                  example: active
+                sub_state:
+                  type: string
+                  example: running
+            adapters:
+              type: object
+              properties:
+                weather_service:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [pass, warn]
+                    provider_state:
+                      type: string
+                      example: online
+                rate_limiter:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                    tracked_keys_count:
+                      type: integer
+        active_alerts:
+          type: array
+          description: "Active hardware and subsystem alerts (offline devices, low batteries, AVM HKR valve errors 1-6, active FRITZ!Box hardware offsets, and degraded health checks) without normal polling/request noise."
+          items:
+            $ref: '#/components/schemas/DiagnosticsAlert'
+        domain_diagnostics:
+          type: object
+          description: "Block 4: CowHome domain diagnostics combining the Digital Twin snapshot, live RulesEngine decision traces, and semantic time-series + heating ramp analysis."
+          properties:
+            digital_twin:
+              type: object
+              description: Current devices, software room groups, outdoor weather, and 24h house heating efficiency.
+              properties:
+                source:
+                  type: string
+                  enum: [live_registry, sqlite_fallback]
+                devices:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DeviceState'
+                software_groups:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SoftwareGroup'
+                weather:
+                  nullable: true
+                  allOf:
+                    - $ref: '#/components/schemas/CurrentWeather'
+                house_heating_efficiency:
+                  nullable: true
+                  allOf:
+                    - $ref: '#/components/schemas/HeatingEfficiency'
+                house_energy_summary:
+                  nullable: true
+                  allOf:
+                    - $ref: '#/components/schemas/EnergySummary'
+            decision_trace:
+              type: object
+              description: Live RulesEngine evaluation trace (why each room/device currently has its target temperature) and persisted automation configurations.
+              properties:
+                live_engine_trace:
+                  type: object
+                  properties:
+                    evaluated_at_epoch:
+                      type: number
+                      example: 1761589800.123
+                    evaluated_at_local_iso:
+                      type: string
+                      format: date-time
+                      example: "2026-10-27T19:30:00+01:00"
+                    timezone_iana:
+                      type: string
+                      example: Europe/Berlin
+                    vacation_locked_ains:
+                      type: array
+                      items:
+                        type: string
+                      description: Normalized device AINs currently locked by global VacationMode.
+                    humidity_boosting_ains:
+                      type: array
+                      items:
+                        type: string
+                      description: Normalized device AINs currently in an active HumidityControl drying boost.
+                    summer_pause_suppressed_ains:
+                      type: array
+                      items:
+                        type: string
+                      description: Normalized device AINs currently paused (8.0 °C) by WeatherSmartHeating (Summer Pause).
+                    presence_away_ains:
+                      type: array
+                      items:
+                        type: string
+                      description: Normalized device AINs currently in an Auto-Away setback (PresenceProfiling).
+                    adaptive_preheating_ains:
+                      type: array
+                      items:
+                        type: string
+                      description: Normalized device AINs currently preheating via AdaptiveStart (Pre-Heat).
+                    adaptive_preheat_targets:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        properties:
+                          target_temp:
+                            type: number
+                            nullable: true
+                          target_time:
+                            type: string
+                            nullable: true
+                      description: Map of normalized actively pre-heating device AINs to their upcoming comfort target_temp (°C) and local target_time (HH:MM).
+                    adaptive_preheat_paused_reasons:
+                      type: object
+                      additionalProperties:
+                        type: string
+                        enum:
+                          - vacation_mode
+                          - summer_pause
+                          - auto_away
+                          - window_open
+                          - manual_override
+                      description: Map of normalized device/group AINs whose Pre-Heat is currently suppressed to their authoritative rule-arbitration pause reason.
+                    manual_override_ains:
+                      type: array
+                      items:
+                        type: string
+                      description: Normalized device AINs currently in a user-initiated manual override until the next HeatingSchedule slot boundary.
+                    active_schedule_slots:
+                      type: object
+                      description: Map of normalized device AINs to their last applied HeatingSchedule slot identifier (e.g. 'tue:06:00-22:00:22.0' or 'tue:eco:0:18.0').
+                    scopes:
+                      type: array
+                      description: List of evaluated scope traces (scope_type, scope_id, targets, schedule_eligible_targets, active_features, scheduled_base_temp, next_comfort_transition).
+                      items:
+                        type: object
+                        properties:
+                          scope_type:
+                            type: string
+                            enum: [global, group, device]
+                            example: group
+                          scope_id:
+                            type: string
+                            example: "1"
+                          targets:
+                            type: array
+                            items:
+                              type: string
+                          schedule_eligible_targets:
+                            type: array
+                            items:
+                              type: string
+                          active_features:
+                            type: array
+                            items:
+                              type: string
+                          scheduled_base_temp:
+                            type: number
+                            nullable: true
+                          next_comfort_transition:
+                            type: object
+                            nullable: true
+                            properties:
+                              target_epoch:
+                                type: number
+                              target_temp:
+                                type: number
+                          rules:
+                            type: object
+                            description: "Per-rule decision trace details for all 7 automation features (HeatingSchedule [including preheat_enabled], AdaptiveStart [including preheat_enabled, status, heating_rate_min_per_c, effective_heating_rate_min_per_c, heating_rate_c_per_hour, outdoor_temp_c, outdoor_inertia_factor, preheat_minutes, preheating_ains, paused_reasons], WeatherSmartHeating, ApparentTemperature, HumidityControl, VacationMode, PresenceProfiling) in this scope."
+                configured_global_rules:
+                  type: object
+                configured_device_rules:
+                  type: object
+            time_series_analysis:
+              type: object
+              description: Map of analyzed entity IDs (thermostat AINs or 'group-<id>') to their semantic curve summary, 4-factor efficiency score, and heating ramp diagnostics.
+              additionalProperties:
+                type: object
+                properties:
+                  device:
+                    type: string
+                  device_type:
+                    type: string
+                  range:
+                    type: string
+                  curve_summary:
+                    type: object
+                    description: Compact statistical summary (start, end, min, max, avg, delta) and discrete state transitions (temperature_target, hardware_target_temperature, window_open, state, humidity_guard_active, preheat_active).
+                    properties:
+                      sample_count:
+                        type: integer
+                      first_timestamp:
+                        type: integer
+                        nullable: true
+                      last_timestamp:
+                        type: integer
+                        nullable: true
+                      metrics:
+                        type: object
+                      state_transitions:
+                        type: array
+                        items:
+                          type: object
+                  efficiency:
+                    nullable: true
+                    allOf:
+                      - $ref: '#/components/schemas/HeatingEfficiency'
+                  heating_forecast:
+                    nullable: true
+                    allOf:
+                      - $ref: '#/components/schemas/HeatingForecast'
+                  energy_summary:
+                    nullable: true
+                    allOf:
+                      - $ref: '#/components/schemas/EnergySummary'
+                  ramp_diagnostics:
+                    type: object
+                    nullable: true
+                    description: Detailed trace of accepted recovery ramps and skipped intervals explaining how heating_rate_min_per_c was learned.
+                    properties:
+                      device:
+                        type: string
+                        example: "15282 0905546"
+                      fallback_to_recent_200:
+                        type: boolean
+                        description: True if no completed heating ramp occurred in the requested range and the analyzer fell back to the last 200 history rows.
+                      average_rate_min_per_c:
+                        type: number
+                        nullable: true
+                        example: 32.5
+                      accepted_count:
+                        type: integer
+                        example: 3
+                      skipped_count:
+                        type: integer
+                        example: 1
+                      accepted_ramps:
+                        type: array
+                        description: Accepted heating ramps (>= 0.5 °C or >= 0.3 °C final temp gain within 15.0–120.0 min/°C bounds).
+                        items:
+                          type: object
+                          properties:
+                            start_ts:
+                              type: integer
+                            end_ts:
+                              type: integer
+                            start_time:
+                              type: string
+                              format: date-time
+                            end_time:
+                              type: string
+                              format: date-time
+                            dt_min:
+                              type: number
+                            temp_start:
+                              type: number
+                            temp_end:
+                              type: number
+                            d_temp:
+                              type: number
+                            hw_temp_delta:
+                              type: number
+                              nullable: true
+                            rate_min_per_c:
+                              type: number
+                              nullable: true
+                            reason:
+                              type: string
+                              example: accepted
+                      skipped_intervals:
+                        type: array
+                        description: "Intervals excluded from ramp learning with reason in ['boiler_dead_time', 'plateau_dead_time_shift', 'rate_out_of_bounds', 'exceeds_max_duration']."
+                        items:
+                          type: object
+                          properties:
+                            start_ts:
+                              type: integer
+                            end_ts:
+                              type: integer
+                            start_time:
+                              type: string
+                              format: date-time
+                            end_time:
+                              type: string
+                              format: date-time
+                            dt_min:
+                              type: number
+                            temp_start:
+                              type: number
+                            temp_end:
+                              type: number
+                            d_temp:
+                              type: number
+                            hw_temp_delta:
+                              type: number
+                              nullable: true
+                            rate_min_per_c:
+                              type: number
+                              nullable: true
+                            reason:
+                              type: string
+                              enum: [boiler_dead_time, plateau_dead_time_shift, rate_out_of_bounds, exceeds_max_duration]
+        recent_errors:
+          type: array
+          description: "Sanitized recent WARNING, ERR, CRIT, ALERT, and EMERG journal/ringbuffer log entries (filtered without INFO polling or request log noise)."
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+              priority:
+                type: string
+                example: WARNING
+              message:
+                type: string
+        recent_logs:
+          type: array
+          description: "Block 5: Sanitized recent systemd journalctl log entries (with ?api_key= query parameters masked)."
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+              priority:
+                type: string
+              message:
+                type: string
+
+security:
+  - BearerAuth: []
+  - ApiKeyHeader: []
+
+paths:
+  /state:
+    get:
+      tags:
+        - State & Devices
+      summary: Get full digital twin state
+      description: Returns a complete snapshot of all known devices and their current properties directly from RAM.
+      operationId: getState
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      devices:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeviceState'
+                      weather:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/CurrentWeather'
+                      heating_efficiency:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/HeatingEfficiency'
+                      heating_forecast:
+                        nullable: true
+                        description: House-wide 5-Day Heating Outlook (also embedded inside heating_efficiency)
+                        allOf:
+                          - $ref: '#/components/schemas/HeatingForecast'
+                      energy_summary:
+                        nullable: true
+                        description: House-wide Smart Energy consumption (today, 7d, 30d, 365d) and cost projection across all power_meter switches
+                        allOf:
+                          - $ref: '#/components/schemas/EnergySummary'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /devices/{device_id}/action:
+    post:
+      tags:
+        - State & Devices
+      summary: Execute an action on a device, router, or software group
+      description: Send a specific action (like toggle switch, set temperature, set name) to a smart home device, a software group ('group-1' or '1'), or the router ('ROUTER_01').
+      operationId: executeDeviceAction
+      parameters:
+        - in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+          description: The AIN of the device, 'ROUTER_01' for router actions, or a software group ID ('1' or 'group-1').
+        - in: header
+          name: X-Client-Timestamp
+          required: false
+          schema:
+            type: number
+            example: 1729685400123
+          description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) and Command TTL protection.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - set_switch
+                    - toggle_switch
+                    - set_temperature
+                    - set_comfort
+                    - set_eco
+                    - set_presets
+                    - set_blind
+                    - set_level
+                    - set_color
+                    - set_color_temperature
+                    - set_name
+                    - set_offset
+                    - reconnect_internet
+                    - reboot
+                    - set_wlan
+                    - set_guest_wlan
+                    - wake_on_lan
+                  example: set_name
+                  description: "Action identifier for Smart Home devices, software groups, or ROUTER_01"
+                params:
+                  type: object
+                  properties:
+                    state:
+                      oneOf:
+                        - type: boolean
+                        - type: string
+                          enum: [open, close, stop]
+                      description: Boolean switch state (for set_switch) or blind state ('open', 'close', 'stop' for set_blind)
+                    temperature:
+                      type: number
+                      example: 21.5
+                      description: Target temperature in °C (for set_temperature, or optional preset override for set_comfort / set_eco)
+                    comfort_temperature:
+                      type: number
+                      example: 22.0
+                      description: Backend comfort preset temperature in °C (for set_presets or set_comfort; also accepted as 'comfort_temp')
+                    comfort_temp:
+                      type: number
+                      example: 22.0
+                      description: Optional alias for comfort_temperature in °C (8.0–28.0 °C)
+                    eco_temperature:
+                      type: number
+                      example: 18.0
+                      description: Backend eco/setback preset temperature in °C (for set_presets or set_eco; also accepted as 'eco_temp')
+                    eco_temp:
+                      type: number
+                      example: 18.0
+                      description: Optional alias for eco_temperature in °C (8.0–28.0 °C)
+                    level:
+                      type: integer
+                      example: 80
+                      description: Brightness/level 0-100 (for set_level)
+                    hue:
+                      type: integer
+                      example: 180
+                      description: Color hue 0-359 (for set_color)
+                    saturation:
+                      type: integer
+                      example: 100
+                      description: Color saturation 0-255 (for set_color)
+                    kelvin:
+                      type: integer
+                      example: 4000
+                      description: Color temperature 2700-6500 K (for set_color_temperature)
+                    name:
+                      type: string
+                      example: "Living Room Thermostat"
+                      description: Custom display name (for set_name)
+                    offset:
+                      type: number
+                      minimum: -5.0
+                      maximum: 5.0
+                      multipleOf: 0.5
+                      example: -1.5
+                      description: "CowHome static calibration offset in °C (-5.0 to +5.0 in 0.5 °C steps) for standalone thermostats (for set_offset; also accepted as 'temperature_offset')"
+                    temperature_offset:
+                      type: number
+                      minimum: -5.0
+                      maximum: 5.0
+                      multipleOf: 0.5
+                      example: -1.5
+                      description: "Optional alias for offset in °C (-5.0 to +5.0 in 0.5 °C steps) for set_offset"
+                    enabled:
+                      type: boolean
+                      example: true
+                      description: Enable/disable flag (for set_wlan and set_guest_wlan)
+                    mac_address:
+                      type: string
+                      example: "00:11:22:33:44:55"
+                      description: Target host MAC address (for wake_on_lan)
+                  description: "Action parameters depending on the selected action."
+                client_timestamp:
+                  type: number
+                  example: 1729685400123
+                  description: Optional client creation timestamp in Unix seconds or milliseconds (also accepted as 'timestamp').
+                timestamp:
+                  type: number
+                  example: 1729685400
+                  description: Optional alias for client_timestamp in Unix seconds or milliseconds.
+      responses:
+        '200':
+          description: Action executed successfully (or ignored as stale with ignored_stale=true)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Smart Home action executed
+                  data:
+                    type: object
+                    properties:
+                      action:
+                        type: string
+                        example: set_name
+                      device:
+                        type: string
+                        example: "15282 0905546"
+                        description: Target device AIN or ROUTER_01 (present for single device/router actions)
+                      group_id:
+                        type: string
+                        example: "1"
+                        description: Target software group ID (present for group actions)
+                      members_count:
+                        type: integer
+                        example: 2
+                        description: Number of group members updated (present for group actions)
+                      ignored_stale:
+                        type: boolean
+                        example: false
+                        description: True if the command was ignored due to Last-Write-Wins (stale client_timestamp) or Command TTL expiration
+        '400':
+          description: Validation error or unknown action
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Device or software group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - thermostat offset is locked by a software group, external room sensor (ApparentTemperature), or an active FRITZ!Box hardware offset (fritz_temperature_offset != 0.0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - FritzBox or database service unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /weather:
+    get:
+      tags:
+        - Weather
+      summary: Get full weather conditions and forecasts
+      description: Returns cached current outdoor conditions, hourly forecast intervals, and 5-day daily forecasts fetched from Open-Meteo.
+      operationId: getWeather
+      responses:
+        '200':
+          description: Full weather data successfully returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/WeatherData'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Weather service unavailable or not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/status:
+    get:
+      tags:
+        - System
+      summary: Get router status
+      description: Returns the FritzBox connection status, external IP, and WLAN state.
+      operationId: getSystemStatus
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Router status retrieved"
+                  data:
+                    type: object
+                    properties:
+                      router_info:
+                        type: object
+                        properties:
+                          model:
+                            type: string
+                            example: "FRITZ!Box 7590"
+                          manufacturer:
+                            type: string
+                            example: "AVM"
+                          software_version:
+                            type: string
+                            example: "7.57"
+                          serial_number:
+                            type: string
+                            example: "123456789"
+                      wan_ip:
+                        type: string
+                        nullable: true
+                        example: "203.0.113.1"
+                      connection_status:
+                        type: object
+                        properties:
+                          is_connected:
+                            type: boolean
+                            example: true
+                          is_linked:
+                            type: boolean
+                            example: true
+                          uptime:
+                            type: integer
+                            example: 86400
+                          external_ip:
+                            type: string
+                            nullable: true
+                            example: "203.0.113.1"
+                          bytes_sent:
+                            type: integer
+                            example: 104857600
+                          bytes_received:
+                            type: integer
+                            example: 524288000
+                      wlan_main:
+                        type: object
+                        properties:
+                          enabled:
+                            type: boolean
+                            example: true
+                          ssid:
+                            type: string
+                            example: "FRITZ!Box 7590"
+                          channel:
+                            oneOf:
+                              - type: integer
+                              - type: string
+                            example: 6
+                      wlan_guest:
+                        type: object
+                        properties:
+                          enabled:
+                            type: boolean
+                            example: false
+                          ssid:
+                            type: string
+                            example: "FRITZ!Box Gastzugang"
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - FritzBox TR-064 unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/hosts:
+    get:
+      tags:
+        - System
+      summary: Get connected hosts
+      description: Returns a list of currently connected network devices (presence detection).
+      operationId: getSystemHosts
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Connected hosts retrieved"
+                  data:
+                    type: object
+                    properties:
+                      hosts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            ip:
+                              type: string
+                              example: "192.168.178.20"
+                            name:
+                              type: string
+                              example: "Pixel-Phone"
+                            mac:
+                              type: string
+                              example: "00:11:22:33:44:55"
+                            status:
+                              type: boolean
+                              example: true
+                            interface_type:
+                              type: string
+                              example: "802.11"
+                            address_source:
+                              type: string
+                              example: "DHCP"
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - FritzBox TR-064 unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/calls:
+    get:
+      tags:
+        - System
+      summary: Get recent calls
+      description: Returns a list of the most recent incoming/outgoing calls and answering machine status.
+      operationId: getSystemCalls
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Call log retrieved"
+                  data:
+                    type: object
+                    properties:
+                      calls:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              example: "1"
+                            type:
+                              type: string
+                              example: "1"
+                            caller:
+                              type: string
+                              example: "01701234567"
+                            called:
+                              type: string
+                              example: "987654"
+                            name:
+                              type: string
+                              example: "Max Mustermann"
+                            date:
+                              type: string
+                              example: "2026-10-12 18:30"
+                            duration:
+                              type: string
+                              example: "0:02"
+                      answering_machine:
+                        type: object
+                        properties:
+                          enabled:
+                            type: boolean
+                            example: true
+                          name:
+                            type: string
+                            example: "Anrufbeantworter 1"
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - FritzBox TR-064 unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/storage:
+    get:
+      tags:
+        - System
+      summary: Get system storage and database diagnostics
+      description: Returns SQLite database file sizes (DB, WAL, SHM), time-series record counts, and host disk space metrics.
+      operationId: getSystemStorage
+      responses:
+        '200':
+          description: Successful storage diagnostics response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Storage diagnostics retrieved"
+                  data:
+                    type: object
+                    properties:
+                      database:
+                        type: object
+                        properties:
+                          path:
+                            type: string
+                            example: /var/lib/cowhome/cowhome.db
+                          db_size_bytes:
+                            type: integer
+                            example: 14745600
+                          db_size_human:
+                            type: string
+                            example: "14.06 MB"
+                          wal_size_bytes:
+                            type: integer
+                            example: 266240
+                          wal_size_human:
+                            type: string
+                            example: "260.00 KB"
+                          shm_size_bytes:
+                            type: integer
+                            example: 32768
+                          shm_size_human:
+                            type: string
+                            example: "32.00 KB"
+                          total_size_bytes:
+                            type: integer
+                            example: 15044608
+                          total_size_human:
+                            type: string
+                            example: "14.35 MB"
+                          history_records_count:
+                            type: integer
+                            example: 48210
+                          entities_count:
+                            type: integer
+                            example: 5
+                          oldest_record:
+                            type: string
+                            nullable: true
+                            example: "2026-09-01 12:00:00"
+                          newest_record:
+                            type: string
+                            nullable: true
+                            example: "2026-10-11 20:00:00"
+                      disk:
+                        type: object
+                        properties:
+                          mount_point:
+                            type: string
+                            example: /var/lib/cowhome
+                          free_bytes:
+                            type: integer
+                            example: 19756843008
+                          free_human:
+                            type: string
+                            example: "18.40 GB"
+                          total_bytes:
+                            type: integer
+                            example: 32007823360
+                          total_human:
+                            type: string
+                            example: "29.81 GB"
+                          used_percent:
+                            type: number
+                            example: 38.3
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/diagnostics:
+    get:
+      tags:
+        - System
+      summary: Get read-only AI and system diagnostics report
+      description: Returns a comprehensive, recursively sanitized 5-block diagnostics report (Universal Diagnostics Schema v1.0) including service metadata, redacted configuration, subsystem health checks, digital twin state, live RulesEngine decision traces, semantic time-series curve summaries, and heating ramp accept/reject traces.
+      operationId: getSystemDiagnostics
+      parameters:
+        - in: query
+          name: device
+          required: false
+          schema:
+            type: string
+            example: "15282 0905546"
+          description: Optional device AIN (e.g. '15282 0905546'), software group ID ('group-1' or '1'), or case-insensitive room/device display name (e.g. 'Wohnzimmer') to restrict time-series and ramp analysis. Group names automatically expand to the group and its member AINs.
+        - in: query
+          name: range
+          required: false
+          schema:
+            type: string
+            enum: [24h, 7d, 30d, 90d, 180d, 365d, 1y, all]
+            default: 24h
+          description: Time window for semantic curve summary and heating ramp analysis.
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 25
+          description: Maximum number of recent error and journal log lines to include (1..200).
+      responses:
+        '200':
+          description: Sanitized system diagnostics report generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "System diagnostics report generated"
+                  data:
+                    $ref: '#/components/schemas/DiagnosticsReport'
+        '400':
+          description: Invalid range query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/ai-diagnostics:
+    get:
+      tags:
+        - System
+      summary: Get read-only AI diagnostics report (alias)
+      description: Alias endpoint for `/api/v1/system/diagnostics` returning the identical Universal Diagnostics Schema v1.0 payload for automated LLM and troubleshooting workflows.
+      operationId: getSystemAiDiagnostics
+      parameters:
+        - in: query
+          name: device
+          required: false
+          schema:
+            type: string
+            example: "15282 0905546"
+          description: Optional device AIN (e.g. '15282 0905546'), software group ID ('group-1' or '1'), or case-insensitive room/device display name (e.g. 'Wohnzimmer') to restrict time-series and ramp analysis. Group names automatically expand to the group and its member AINs.
+        - in: query
+          name: range
+          required: false
+          schema:
+            type: string
+            enum: [24h, 7d, 30d, 90d, 180d, 365d, 1y, all]
+            default: 24h
+          description: Time window for semantic curve summary and heating ramp analysis.
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 25
+          description: Maximum number of recent error and journal log lines to include (1..200).
+      responses:
+        '200':
+          description: Sanitized AI diagnostics report generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "System diagnostics report generated"
+                  data:
+                    $ref: '#/components/schemas/DiagnosticsReport'
+        '400':
+          description: Invalid range query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/energy:
+    get:
+      tags:
+        - System
+      summary: Get electricity tariff, monthly base fee, and house-wide smart energy summary
+      description: Returns the configured electricity price in EUR/kWh (default 0.35 EUR/kWh), the monthly base fee in EUR/month (default 0.00 EUR/month), and the aggregated house-wide smart energy summary across all power_meter switches.
+      operationId: getSystemEnergy
+      responses:
+        '200':
+          description: Energy settings and house summary retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Energy settings retrieved"
+                  data:
+                    type: object
+                    properties:
+                      electricity_price_eur_per_kwh:
+                        type: number
+                        example: 0.35
+                      electricity_base_fee_eur_per_month:
+                        type: number
+                        example: 12.50
+                      currency:
+                        type: string
+                        example: EUR
+                      energy_summary:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/EnergySummary'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - System
+      summary: Update electricity tariff (EUR/kWh) and/or monthly base fee (EUR/month)
+      description: Persists the electricity price per kilowatt-hour (0.00 to 5.00 EUR/kWh) and/or the monthly base fee (0.00 to 500.00 EUR/month) in system_settings with Last-Write-Wins (LWW) offline-sync protection and refreshes cached energy cost projections.
+      operationId: updateSystemEnergy
+      parameters:
+        - in: header
+          name: X-Client-Timestamp
+          required: false
+          schema:
+            type: number
+            example: 1729685400123
+          description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) protection.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                electricity_price_eur_per_kwh:
+                  type: number
+                  minimum: 0.0
+                  maximum: 5.0
+                  example: 0.35
+                  description: Electricity tariff in EUR/kWh (also accepted via aliases 'price_eur_per_kwh', 'electricity_price', or 'tariff_eur_per_kwh')
+                electricity_base_fee_eur_per_month:
+                  type: number
+                  minimum: 0.0
+                  maximum: 500.0
+                  example: 12.50
+                  description: Monthly electricity base fee in EUR/month (0.00 to 500.00; also accepted via aliases 'base_fee_eur_per_month', 'electricity_base_fee', or 'monthly_base_fee')
+                client_timestamp:
+                  type: number
+                  example: 1729685400123
+                  description: Optional client creation timestamp in Unix seconds or milliseconds (also accepted as 'timestamp')
+      responses:
+        '200':
+          description: Electricity tariff and/or base fee updated (or ignored as stale with ignored_stale=true)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Energy settings updated"
+                  data:
+                    type: object
+                    properties:
+                      electricity_price_eur_per_kwh:
+                        type: number
+                        example: 0.35
+                      electricity_base_fee_eur_per_month:
+                        type: number
+                        example: 12.50
+                      currency:
+                        type: string
+                        example: EUR
+                      ignored_stale:
+                        type: boolean
+                        example: false
+                      energy_summary:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/EnergySummary'
+        '400':
+          description: Validation error (missing or out-of-range electricity price or base fee)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/settings:
+    get:
+      tags:
+        - System
+      summary: Get system energy settings (alias)
+      description: Alias endpoint for `GET /api/v1/system/energy` returning the configured electricity tariff (EUR/kWh), monthly base fee (EUR/month), and house-wide energy summary.
+      operationId: getSystemSettings
+      responses:
+        '200':
+          description: Energy settings retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Energy settings retrieved"
+                  data:
+                    type: object
+                    properties:
+                      electricity_price_eur_per_kwh:
+                        type: number
+                        example: 0.35
+                      electricity_base_fee_eur_per_month:
+                        type: number
+                        example: 12.50
+                      currency:
+                        type: string
+                        example: EUR
+                      energy_summary:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/EnergySummary'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - System
+      summary: Update system energy settings (alias)
+      description: Alias endpoint for `PUT /api/v1/system/energy` updating the electricity tariff (EUR/kWh) and/or monthly base fee (EUR/month) with Last-Write-Wins (LWW) protection.
+      operationId: updateSystemSettings
+      parameters:
+        - in: header
+          name: X-Client-Timestamp
+          required: false
+          schema:
+            type: number
+            example: 1729685400123
+          description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) protection.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                electricity_price_eur_per_kwh:
+                  type: number
+                  minimum: 0.0
+                  maximum: 5.0
+                  example: 0.35
+                  description: Electricity tariff in EUR/kWh (also accepted via aliases 'price_eur_per_kwh', 'electricity_price', or 'tariff_eur_per_kwh')
+                electricity_base_fee_eur_per_month:
+                  type: number
+                  minimum: 0.0
+                  maximum: 500.0
+                  example: 12.50
+                  description: Monthly electricity base fee in EUR/month (0.00 to 500.00; also accepted via aliases 'base_fee_eur_per_month', 'electricity_base_fee', or 'monthly_base_fee')
+                client_timestamp:
+                  type: number
+                  example: 1729685400123
+                  description: Optional client creation timestamp in Unix seconds or milliseconds (also accepted as 'timestamp')
+      responses:
+        '200':
+          description: Energy settings updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Energy settings updated"
+                  data:
+                    type: object
+                    properties:
+                      electricity_price_eur_per_kwh:
+                        type: number
+                        example: 0.35
+                      electricity_base_fee_eur_per_month:
+                        type: number
+                        example: 12.50
+                      currency:
+                        type: string
+                        example: EUR
+                      ignored_stale:
+                        type: boolean
+                        example: false
+                      energy_summary:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/EnergySummary'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /history:
+    get:
+      tags:
+        - History
+      summary: Get historical time-series data
+      description: Returns raw historical data for a specific device in a column-oriented format (array of arrays), optimized for low bandwidth, rapid JSON parsing, and differential offline-first synchronization.
+      operationId: getHistory
+      parameters:
+        - in: query
+          name: device
+          required: true
+          schema:
+            type: string
+            example: "15282 0905546"
+          description: The AIN of the device, 'WEATHER_01' for outdoor weather history, or a software group ID ('group-1' / 'group-{id}') for aggregated room group history and efficiency.
+        - in: query
+          name: since
+          required: false
+          schema:
+            type: integer
+            example: 1728669600
+          description: UNIX timestamp (seconds or milliseconds). If provided, only data points recorded after this timestamp are returned (differential offline-first sync).
+        - in: query
+          name: range
+          required: false
+          schema:
+            type: string
+            enum: [24h, 7d, 30d, 90d, 180d, 365d, 1y, all]
+            default: 24h
+            example: 30d
+          description: Time range to fetch when 'since' is omitted (24h, 7d, 30d, 90d, 180d, 365d, 1y, all). Defaults to 24h.
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            default: 5000
+            example: 5000
+          description: Maximum number of data points to return (0 = unlimited, up to 100000). Defaults to 5000.
+      responses:
+        '200':
+          description: Historical time-series data in column-oriented format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Historical data retrieved"
+                  data:
+                    type: object
+                    properties:
+                      device:
+                        type: string
+                        example: "15282 0905546"
+                        description: The device AIN
+                      device_type:
+                        type: string
+                        example: thermostat
+                        description: Standardized device type
+                      columns:
+                        type: array
+                        items:
+                          type: string
+                        example: ["timestamp", "temperature_current", "temperature_target", "humidity", "battery_level", "window_open", "temperature_hardware", "hardware_target_temperature", "humidity_guard_active", "preheat_active"]
+                        description: Order and names of metrics present in each row of 'points'
+                      points:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: number
+                        example:
+                          - [1728669600, 21.5, 22.0, 52.0, 90, 0, 22.5, 22.0, 0, 0]
+                          - [1728670500, 21.6, 22.0, 52.0, 90, 0, 22.6, 22.0, 0, 0]
+                        description: Array of point rows matching the column structure
+                      count:
+                        type: integer
+                        example: 2
+                        description: Number of returned data points
+                      efficiency:
+                        nullable: true
+                        description: Thermal Heating Efficiency Score for the requested thermostat/group and time window (only present for thermostat / thermostat_group)
+                        allOf:
+                          - $ref: '#/components/schemas/HeatingEfficiency'
+                      heating_forecast:
+                        nullable: true
+                        description: 5-Day Heating Outlook for the requested thermostat/group (only present for thermostat / thermostat_group; also embedded inside efficiency)
+                        allOf:
+                          - $ref: '#/components/schemas/HeatingForecast'
+                      energy_summary:
+                        nullable: true
+                        description: Smart Energy consumption (today, 7d, 30d, 365d) and cost projection for the requested smart switch or software group containing switches
+                        allOf:
+                          - $ref: '#/components/schemas/EnergySummary'
+        '400':
+          description: Missing or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /groups:
+    get:
+      tags:
+        - Software Groups
+      summary: Get all software groups
+      description: Returns a list of all virtual groups managed by CowHome.
+      operationId: getGroups
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Software groups retrieved"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SoftwareGroup'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Software Groups
+      summary: Create a new software group
+      description: Creates a new virtual group with a name and a list of member AINs.
+      operationId: createGroup
+      parameters:
+        - in: header
+          name: X-Client-Timestamp
+          required: false
+          schema:
+            type: number
+            example: 1729685400123
+          description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) metadata initialization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - members
+              properties:
+                name:
+                  type: string
+                  example: "Living Room"
+                members:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of device AINs belonging to this group
+                client_timestamp:
+                  type: number
+                  example: 1729685400123
+                  description: Optional client creation timestamp in Unix seconds or milliseconds (also accepted as 'timestamp').
+                timestamp:
+                  type: number
+                  example: 1729685400
+                  description: Optional alias for client_timestamp in Unix seconds or milliseconds.
+      responses:
+        '201':
+          description: Group created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Software group created"
+                  data:
+                    $ref: '#/components/schemas/SoftwareGroup'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - one or more member devices already belong to another software group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /groups/{group_id}:
+    get:
+      tags:
+        - Software Groups
+      summary: Get a software group
+      description: Returns details of a specific virtual group and its member devices.
+      operationId: getGroup
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Software group retrieved"
+                  data:
+                    $ref: '#/components/schemas/SoftwareGroup'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Software Groups
+      summary: Update a software group
+      description: Modifies the name or members of an existing virtual group.
+      operationId: updateGroup
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Client-Timestamp
+          required: false
+          schema:
+            type: number
+            example: 1729685400123
+          description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) protection.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Living Room Updated"
+                members:
+                  type: array
+                  items:
+                    type: string
+                  example: ["15282 0905546"]
+                client_timestamp:
+                  type: number
+                  example: 1729685400123
+                  description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) protection (also accepted as 'timestamp').
+                timestamp:
+                  type: number
+                  example: 1729685400
+                  description: Optional alias for client_timestamp in Unix seconds or milliseconds.
+      responses:
+        '200':
+          description: Group updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Software group updated"
+                  data:
+                    $ref: '#/components/schemas/SoftwareGroup'
+        '400':
+          description: Invalid update payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - one or more member devices already belong to another software group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Software Groups
+      summary: Delete a software group
+      description: Removes a virtual group. Devices in the group are not deleted.
+      operationId: deleteGroup
+      parameters:
+        - in: path
+          name: group_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Group deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Software group deleted"
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: success
+                      id:
+                        type: string
+                        example: "1"
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /automation:
+    get:
+      tags:
+        - Automation
+      summary: Get all automation features for a scope
+      description: Returns a dictionary of all automation features with their active status and configuration for the requested scope (global, group, or standalone device).
+      operationId: getAutomation
+      parameters:
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+            enum: [global, group, device]
+            default: global
+          description: Target scope level ('global', 'group', or 'device'; also accepted via query parameter 'scope_type').
+        - in: query
+          name: scope_type
+          required: false
+          schema:
+            type: string
+            enum: [global, group, device]
+          description: Optional alias for the 'scope' query parameter.
+        - in: query
+          name: scope_id
+          required: false
+          schema:
+            type: string
+            default: global
+            example: "group-1"
+          description: Target group ID (e.g. '1' or 'group-1') or device AIN when scope is 'group' or 'device'.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Automation configurations retrieved"
+                  data:
+                    type: object
+                    additionalProperties:
+                      $ref: '#/components/schemas/AutomationFeatureConfig'
+        '400':
+          description: Invalid scope or scope_id parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - device is managed by a software group (Single Authority lock)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Automation
+      summary: Update multiple automation features for a scope
+      description: Updates the status and/or configuration of multiple automation features at once for the specified scope.
+      operationId: updateAutomation
+      parameters:
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+            enum: [global, group, device]
+            default: global
+          description: Target scope level ('global', 'group', or 'device'; also accepted via 'scope_type' in query or JSON body).
+        - in: query
+          name: scope_type
+          required: false
+          schema:
+            type: string
+            enum: [global, group, device]
+          description: Optional alias for the 'scope' query parameter.
+        - in: query
+          name: scope_id
+          required: false
+          schema:
+            type: string
+            default: global
+            example: "group-1"
+          description: Target group ID or device AIN when scope is 'group' or 'device' (also accepted in JSON body).
+        - in: header
+          name: X-Client-Timestamp
+          required: false
+          schema:
+            type: number
+            example: 1729685400123
+          description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) protection.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Map of automation feature names to AutomationFeatureConfig objects (may also include top-level 'scope', 'scope_type', 'scope_id', 'client_timestamp', or 'timestamp').
+              additionalProperties:
+                $ref: '#/components/schemas/AutomationFeatureConfig'
+      responses:
+        '200':
+          description: Features updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Automation configurations updated"
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: success
+                      scope:
+                        type: string
+                        example: group
+                      scope_type:
+                        type: string
+                        example: group
+                      scope_id:
+                        type: string
+                        example: "1"
+                      ignored_stale:
+                        type: boolean
+                        example: false
+                        description: True if the automation batch update was ignored due to a stale client_timestamp (Last-Write-Wins)
+        '400':
+          description: Validation error or invalid feature configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - device is managed by a software group (Single Authority lock)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /automation/{feature}:
+    get:
+      tags:
+        - Automation
+      summary: Get a specific automation feature for a scope
+      description: Returns the status and configuration for a specific automation feature in the requested scope.
+      operationId: getAutomationFeature
+      parameters:
+        - in: path
+          name: feature
+          required: true
+          schema:
+            type: string
+            enum:
+              - WeatherSmartHeating
+              - HumidityControl
+              - VacationMode
+              - ApparentTemperature
+              - HeatingSchedule
+              - PowerSchedule
+              - AdaptiveStart
+              - PresenceProfiling
+          description: Automation feature identifier ('PowerSchedule' is accepted as an alias for 'HeatingSchedule').
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+            enum: [global, group, device]
+            default: global
+          description: Target scope level ('global', 'group', or 'device'; also accepted via 'scope_type').
+        - in: query
+          name: scope_type
+          required: false
+          schema:
+            type: string
+            enum: [global, group, device]
+          description: Optional alias for the 'scope' query parameter.
+        - in: query
+          name: scope_id
+          required: false
+          schema:
+            type: string
+            default: global
+            example: "group-1"
+          description: Target group ID or device AIN when scope is 'group' or 'device'.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Automation feature retrieved"
+                  data:
+                    $ref: '#/components/schemas/AutomationFeatureConfig'
+        '400':
+          description: Invalid scope or scope_id parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Automation feature not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - device is managed by a software group (Single Authority lock)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Automation
+      summary: Update a specific automation feature for a scope
+      description: Updates the status and/or configuration of a specific automation feature in the specified scope.
+      operationId: updateAutomationFeature
+      parameters:
+        - in: path
+          name: feature
+          required: true
+          schema:
+            type: string
+            enum:
+              - WeatherSmartHeating
+              - HumidityControl
+              - VacationMode
+              - ApparentTemperature
+              - HeatingSchedule
+              - PowerSchedule
+              - AdaptiveStart
+              - PresenceProfiling
+          description: Automation feature identifier ('PowerSchedule' is accepted as an alias for 'HeatingSchedule').
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+            enum: [global, group, device]
+            default: global
+          description: Target scope level ('global', 'group', or 'device'; also accepted via 'scope_type').
+        - in: query
+          name: scope_type
+          required: false
+          schema:
+            type: string
+            enum: [global, group, device]
+          description: Optional alias for the 'scope' query parameter.
+        - in: query
+          name: scope_id
+          required: false
+          schema:
+            type: string
+            default: global
+            example: "group-1"
+          description: Target group ID or device AIN when scope is 'group' or 'device' (also accepted in JSON body).
+        - in: header
+          name: X-Client-Timestamp
+          required: false
+          schema:
+            type: number
+            example: 1729685400123
+          description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) protection.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_active:
+                  type: boolean
+                  example: true
+                  description: Whether this automation feature is enabled (also accepted via aliases 'enabled' or 'active').
+                enabled:
+                  type: boolean
+                  description: Optional alias for 'is_active'.
+                active:
+                  type: boolean
+                  description: Optional alias for 'is_active'.
+                config:
+                  type: object
+                  example:
+                    outdoor_temp_threshold: 16.0
+                  description: Feature configuration dictionary (for HeatingSchedule / PowerSchedule, a top-level 'days' object is also accepted directly).
+                scope:
+                  type: string
+                  enum: [global, group, device]
+                  description: Optional target scope override in request body (also accepted as 'scope_type').
+                scope_id:
+                  type: string
+                  example: "group-1"
+                  description: Optional target scope_id override in request body.
+                client_timestamp:
+                  type: number
+                  example: 1729685400123
+                  description: Optional client creation timestamp in Unix seconds or milliseconds for Last-Write-Wins (LWW) protection (also accepted as 'timestamp').
+                timestamp:
+                  type: number
+                  example: 1729685400
+                  description: Optional alias for client_timestamp in Unix seconds or milliseconds.
+      responses:
+        '200':
+          description: Feature updated successfully (or ignored as stale with ignored_stale=true)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Feature updated"
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: success
+                      feature:
+                        type: string
+                        example: WeatherSmartHeating
+                      scope:
+                        type: string
+                        example: group
+                      scope_type:
+                        type: string
+                        example: group
+                      scope_id:
+                        type: string
+                        example: "1"
+                      ignored_stale:
+                        type: boolean
+                        example: false
+                        description: True if the feature update was ignored due to a stale client_timestamp (Last-Write-Wins)
+        '400':
+          description: Validation error or invalid feature configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Automation feature not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - device is managed by a software group (Single Authority lock)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable - database service not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /docs:
+    get:
+      tags:
+        - Documentation
+      summary: Interactive Swagger UI
+      description: "Serves the zero-secret interactive Swagger UI HTML shell with an in-page Bearer token gate (`sessionStorage`). Any legacy `?api_key=` query parameters are scrubbed from the URL bar via `history.replaceState` without being accepted as credentials (RFC 6750). Actual OpenAPI specification loading (`/api/v1/openapi.yaml`) and API execution authenticate strictly via `Authorization: Bearer` or `X-API-Key` HTTP headers."
+      operationId: getDocsUI
+      security: []
+      responses:
+        '200':
+          description: Swagger UI HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /openapi.yaml:
+    get:
+      tags:
+        - Documentation
+      summary: OpenAPI 3.0 YAML specification
+      description: "Returns the raw OpenAPI 3.0.3 YAML specification document. Requires a valid API key in HTTP headers (`Authorization: Bearer`, `Authorization: ApiKey`, or `X-API-Key` per RFC 6750)."
+      operationId: getOpenAPISpec
+      responses:
+        '200':
+          description: OpenAPI YAML specification
+          content:
+            application/yaml:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Specification file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests - rate limit or brute-force lockout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

@@ -1,0 +1,47 @@
+[Unit]
+Description={{SOFTWARE_NAME}} Smart Home Hub
+Wants=network-online.target
+After=network-online.target
+PartOf={{SERVICE_PART_OF}}
+
+[Service]
+Type={{SERVICE_TYPE}}
+User={{SERVICE_USER}}
+Group={{SERVICE_GROUP}}
+RuntimeDirectory={{SOFTWARE_DIR_NAME}}
+RuntimeDirectoryMode=0750
+StateDirectory={{SOFTWARE_DIR_NAME}}
+StateDirectoryMode=0750
+UMask={{SERVICE_UMASK}}
+SupplementaryGroups={{SERVICE_SUPPLEMENTARY_GROUPS}}
+Environment={{SERVICE_ENVIRONMENT}}
+ExecStart={{SERVICE_EXEC_START}}
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop={{SERVICE_EXEC_STOP}}
+Restart={{SERVICE_RESTART}}
+RestartPreventExitStatus=0
+RestartSec={{SERVICE_RESTART_SEC}}
+TimeoutStartSec={{SERVICE_TIMEOUT_START_SEC}}
+TimeoutStopSec={{SERVICE_TIMEOUT_STOP_SEC}}
+StandardOutput=journal
+StandardError=journal
+StandardInput=null
+SyslogIdentifier={{SOFTWARE_DIR_NAME}}
+
+# Security hardening (systemd.exec(5))
+NoNewPrivileges={{SERVICE_NO_NEW_PRIVILEGES}}
+PrivateTmp={{SERVICE_PRIVATE_TMP}}
+PrivateDevices={{SERVICE_PRIVATE_DEVICES}}
+ProtectSystem={{SERVICE_PROTECT_SYSTEM}}
+ProtectHome={{SERVICE_PROTECT_HOME}}
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+ReadWritePaths={{STATE_DIR}} {{RUN_DIR}}
+ReadWritePaths={{SERVICE_READ_WRITE_PATHS}}
+
+[Install]
+WantedBy=multi-user.target

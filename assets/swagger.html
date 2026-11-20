@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CowHome API - Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css">
+    <style>
+      :root {
+        --bg-primary: #0f172a;
+        --bg-surface: #1e293b;
+        --bg-swagger: #f8fafc;
+        --bg-backdrop: rgba(15, 23, 42, 0.72);
+        --border-subtle: #334155;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --accent-primary: #38bdf8;
+        --accent-hover: #0284c7;
+        --status-error: #f87171;
+        --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --fs-header: 1.5rem;
+        --fs-body: 1rem;
+        --fs-meta: 0.85rem;
+      }
+      html { box-sizing: border-box; overflow-y: scroll; }
+      *, *::before, *::after { box-sizing: inherit; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        font-size: var(--fs-body);
+        font-variant-numeric: tabular-nums;
+      }
+      .auth-shell {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+      }
+      .hidden, .auth-shell.hidden { display: none; }
+      .auth-card {
+        width: 100%;
+        max-width: 28rem;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.75rem;
+        padding: 2rem;
+      }
+      .auth-title {
+        margin: 0 0 0.5rem 0;
+        font-size: var(--fs-header);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .auth-subtitle {
+        margin: 0 0 1.5rem 0;
+        font-size: var(--fs-meta);
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+      .auth-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: var(--fs-meta);
+        color: var(--text-secondary);
+      }
+      .auth-input {
+        width: 100%;
+        min-height: 2.75rem;
+        padding: 0.65rem 0.85rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border-subtle);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: var(--font-mono);
+        font-size: var(--fs-body);
+        margin-bottom: 1rem;
+      }
+      .auth-input:focus {
+        outline: 2px solid var(--accent-primary);
+        outline-offset: 1px;
+      }
+      .btn-primary, .btn-secondary, .btn-danger {
+        min-height: 2.75rem;
+        padding: 0.65rem 1rem;
+        border-radius: 0.5rem;
+        font-family: var(--font-sans);
+        font-size: var(--fs-body);
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+      .btn-primary {
+        width: 100%;
+        background: var(--accent-primary);
+        color: var(--bg-primary);
+      }
+      .btn-primary:hover:not(:disabled) {
+        background: var(--accent-hover);
+        color: var(--text-primary);
+      }
+      .btn-secondary {
+        background: transparent;
+        border-color: var(--border-subtle);
+        color: var(--text-primary);
+      }
+      .btn-secondary:hover:not(:disabled) {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+      }
+      .btn-danger {
+        background: var(--status-error);
+        color: var(--bg-primary);
+      }
+      .btn-danger:hover:not(:disabled) {
+        opacity: 0.9;
+      }
+      button:disabled, input:disabled {
+        opacity: 0.45;
+        filter: grayscale(40%);
+        cursor: not-allowed;
+      }
+      .auth-error {
+        margin: 0 0 1rem 0;
+        font-size: var(--fs-meta);
+        color: var(--status-error);
+      }
+      .docs-topbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .docs-topbar-title {
+        font-size: var(--fs-body);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .docs-topbar-meta {
+        font-size: var(--fs-meta);
+        color: var(--text-secondary);
+        margin-left: 0.75rem;
+      }
+      .swagger-stage {
+        min-height: calc(100vh - 3.5rem);
+        background: var(--bg-swagger);
+      }
+      .confirm-dialog {
+        width: 100%;
+        max-width: 26rem;
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+      }
+      .confirm-dialog::backdrop {
+        background: var(--bg-backdrop);
+      }
+      .confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms;
+          transition-duration: 0.01ms;
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+</head>
+<body>
+    <main id="auth-view" class="auth-shell">
+        <section class="auth-card" aria-labelledby="auth-heading">
+            <h1 id="auth-heading" class="auth-title">CowHome API Docs</h1>
+            <p class="auth-subtitle">
+                Enter your CowHome Bearer API key to unlock the OpenAPI specification.
+                Credentials are sent exclusively via HTTP headers (RFC 6750).
+            </p>
+            <p id="auth-error" class="auth-error hidden" role="alert"></p>
+            <form id="auth-form" autocomplete="off">
+                <label for="api-key-input" class="auth-label">API Key</label>
+                <input
+                    id="api-key-input"
+                    class="auth-input"
+                    type="password"
+                    placeholder="Paste Bearer / X-API-Key token"
+                    required
+                >
+                <button id="unlock-btn" class="btn-primary" type="submit">Unlock Documentation</button>
+            </form>
+        </section>
+    </main>
+
+    <div id="docs-view" class="hidden">
+        <header class="docs-topbar">
+            <div>
+                <span class="docs-topbar-title">CowHome OpenAPI v1</span>
+                <span class="docs-topbar-meta">Header-Authenticated Session</span>
+            </div>
+            <button id="logout-btn" class="btn-secondary" type="button">Lock Session</button>
+        </header>
+        <div id="swagger-ui" class="swagger-stage"></div>
+    </div>
+
+    <dialog id="confirm-lock-dialog" class="confirm-dialog" aria-labelledby="confirm-lock-title">
+        <h2 id="confirm-lock-title" class="auth-title">Lock Session?</h2>
+        <p class="auth-subtitle">
+            Lock the documentation session and clear the Bearer API key from this browser tab?
+        </p>
+        <div class="confirm-actions">
+            <button id="cancel-lock-btn" class="btn-secondary" type="button">Cancel</button>
+            <button id="confirm-lock-btn" class="btn-danger" type="button">Lock Session</button>
+        </div>
+    </dialog>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+    (function() {
+      "use strict";
+      const STORAGE_KEY = "cowhome_docs_bearer_token";
+      const SPEC_URL = "/api/v1/openapi.yaml";
+      const authView = document.getElementById("auth-view");
+      const docsView = document.getElementById("docs-view");
+      const authForm = document.getElementById("auth-form");
+      const keyInput = document.getElementById("api-key-input");
+      const unlockBtn = document.getElementById("unlock-btn");
+      const logoutBtn = document.getElementById("logout-btn");
+      const errorBox = document.getElementById("auth-error");
+      const lockDialog = document.getElementById("confirm-lock-dialog");
+      const cancelLockBtn = document.getElementById("cancel-lock-btn");
+      const confirmLockBtn = document.getElementById("confirm-lock-btn");
+
+      function scrubUrlQuerySecrets() {
+        if (!window.history || !window.history.replaceState) {
+          return;
+        }
+        const params = new URLSearchParams(window.location.search);
+        let modified = false;
+        ["api_key", "apikey", "token", "access_token", "sid"].forEach(function(param) {
+          if (params.has(param)) {
+            params.delete(param);
+            modified = true;
+          }
+        });
+        if (modified) {
+          const cleanQuery = params.toString();
+          const cleanUrl = window.location.pathname + (cleanQuery ? "?" + cleanQuery : "") + window.location.hash;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      }
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.classList.remove("hidden");
+      }
+
+      function clearError() {
+        errorBox.textContent = "";
+        errorBox.classList.add("hidden");
+      }
+
+      function setFormBusy(isBusy) {
+        keyInput.disabled = isBusy;
+        unlockBtn.disabled = isBusy;
+        unlockBtn.textContent = isBusy ? "Unlocking..." : "Unlock Documentation";
+      }
+
+      function mountSwagger(token) {
+        if (typeof SwaggerUIBundle === "undefined") {
+          showError("API key verified, but Swagger UI assets from unpkg.com could not be loaded (offline LAN).");
+          return;
+        }
+        authView.classList.add("hidden");
+        docsView.classList.remove("hidden");
+        window.ui = SwaggerUIBundle({
+          url: SPEC_URL,
+          dom_id: "#swagger-ui",
+          deepLinking: true,
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+          layout: "StandaloneLayout",
+          requestInterceptor: function(request) {
+            if (token && !request.headers["Authorization"] && !request.headers["X-API-Key"]) {
+              request.headers["Authorization"] = "Bearer " + token;
+            }
+            return request;
+          },
+          onComplete: function() {
+            if (token && window.ui && window.ui.preauthorizeApiKey) {
+              window.ui.preauthorizeApiKey("BearerAuth", token);
+              window.ui.preauthorizeApiKey("ApiKeyHeader", token);
+            }
+          }
+        });
+      }
+
+      async function verifyAndUnlock(token) {
+        clearError();
+        setFormBusy(true);
+        try {
+          const response = await fetch(SPEC_URL, {
+            method: "GET",
+            headers: { "Authorization": "Bearer " + token }
+          });
+          if (!response.ok) {
+            window.sessionStorage.removeItem(STORAGE_KEY);
+            if (response.status === 429) {
+              showError("Too many failed authentication attempts. Please wait before retrying.");
+            } else {
+              showError("Invalid API key (HTTP " + response.status + ").");
+            }
+            return;
+          }
+          window.sessionStorage.setItem(STORAGE_KEY, token);
+          keyInput.value = "";
+          mountSwagger(token);
+        } catch (err) {
+          showError("Network error while verifying API key.");
+        } finally {
+          setFormBusy(false);
+        }
+      }
+
+      function closeLockDialog() {
+        if (lockDialog && lockDialog.open) {
+          lockDialog.close();
+        }
+        logoutBtn.focus();
+      }
+
+      authForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+        const candidate = keyInput.value.trim();
+        if (!candidate) {
+          showError("Please enter a valid API key.");
+          return;
+        }
+        verifyAndUnlock(candidate);
+      });
+
+      logoutBtn.addEventListener("click", function() {
+        if (lockDialog && typeof lockDialog.showModal === "function") {
+          lockDialog.showModal();
+          cancelLockBtn.focus();
+        } else {
+          window.sessionStorage.removeItem(STORAGE_KEY);
+          window.location.reload();
+        }
+      });
+
+      cancelLockBtn.addEventListener("click", closeLockDialog);
+
+      confirmLockBtn.addEventListener("click", function() {
+        if (lockDialog && lockDialog.open) {
+          lockDialog.close();
+        }
+        window.sessionStorage.removeItem(STORAGE_KEY);
+        window.location.reload();
+      });
+
+      lockDialog.addEventListener("cancel", function(event) {
+        event.preventDefault();
+        closeLockDialog();
+      });
+
+      lockDialog.addEventListener("click", function(event) {
+        if (event.target === lockDialog) {
+          closeLockDialog();
+        }
+      });
+
+      scrubUrlQuerySecrets();
+      const savedToken = window.sessionStorage.getItem(STORAGE_KEY);
+      if (savedToken) {
+        verifyAndUnlock(savedToken);
+      }
+    })();
+    </script>
+</body>
+</html>

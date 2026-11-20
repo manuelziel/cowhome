@@ -1,0 +1,91 @@
+# =========================
+# CowHome Configuration
+# =========================
+
+# ----------- DEBUGGING -----------
+[debug]
+# Set to DEBUG, INFO, WARNING, ERROR, CRITICAL or NOTSET
+level = "INFO"
+
+# Enable colored console output
+console_colors = true
+
+# ----------- SERVER (HTTP REST API) -----------
+[server]
+# IP address the server will bind to (127.0.0.1 behind local nginx, 0.0.0.0 for LAN access)
+host = "127.0.0.1"
+
+# Port the server will listen on
+port = 8010
+
+# Public or LAN base URL used by clients
+base_url = "https://home.libracow.com"
+
+# ----------- API SECURITY -----------
+[api]
+# Master API Key required for all REST requests (must be >= 16 printable ASCII chars)
+api_key = "changeme-super-secret-key"
+
+# Trusted reverse proxy IPs or CIDRs allowed to supply X-Forwarded-For / X-Real-IP headers
+trusted_proxies = ["127.0.0.1", "::1"]
+
+# ----------- RATE LIMITING (Brute-Force & DoS Protection) -----------
+[rate_limit]
+# Enable sliding-window rate limiting and auth brute-force protection
+enabled = true
+
+# Time window in seconds for failed auth lockouts (default: 3600 = 1 hour)
+window = 3600
+
+# Maximum failed API key authentication attempts per IP within window
+max_login_attempts = 5
+
+# Maximum total HTTP requests per minute per IP
+max_requests_per_minute_per_ip = 120
+
+# ----------- FRITZBOX -----------
+[fritzbox]
+# IP or hostname of your FritzBox
+host = "fritz.box"
+
+# FritzBox Smart Home / TR-064 username
+username = ""
+
+# Password for the FritzBox user
+password = ""
+
+# Background hardware polling interval in seconds (default: 60)
+poll_interval = 60
+
+# ----------- DAEMON CONFIGURATION -----------
+[daemon]
+# Enable background polling and automation cycles in daemon mode
+enabled = true
+
+# ----------- DATABASE -----------
+[database]
+# Relative SQLite filename inside /var/lib/cowhome (or explicit path)
+db_path = "cowhome.db"
+
+# ----------- WEATHER (Open-Meteo) -----------
+[weather]
+# Home coordinates for outdoor climate and 5-day heating forecasts
+latitude = 52.52
+longitude = 13.41
+
+# Home IANA timezone for schedules and forecasts (e.g. "Europe/Berlin" or "auto")
+timezone = "Europe/Berlin"
+
+# Weather update interval in seconds (default: 3600 = 1 hour)
+update_interval = 3600
+
+# Number of forecast days to fetch (1..16)
+forecast_days = 5
+
+# ----------- AUTOMATION -----------
+[automation]
+# Rules Engine evaluation interval in seconds (default: 60)
+interval = 60
+
+# Global vacation mode override (true = frost protection active)
+vacation_mode = false

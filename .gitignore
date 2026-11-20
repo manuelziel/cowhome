@@ -1,0 +1,45 @@
+# Rust build artifacts & local bundle binary
+/target/
+/cowhome
+/config.toml
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Cryptographic Keys & Secrets (NEVER commit!)
+.encryption_key
+keys/
+*.pem
+*.key
+
+# Environment Variables
+.env
+.env.*
+
+# IDE & Agents
+.vscode/
+.idea/
+.agents/
+.continue/
+*.swp
+*.swo
+.*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs & Runtime
+logs/
+*.log
+.run/
+*.tmp
+*.temp
+
+# Project Resources (internal docs & references)
+_project-resources/
