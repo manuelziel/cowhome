@@ -273,10 +273,10 @@ fn append_climate_and_anomaly_badges(
     parts: &mut Vec<String>,
     printer: ConsolePrinter,
 ) {
-    if has_capability(dev, device_capabilities::HUMIDITY_SENSOR) {
-        if let Some(h) = dev.get("humidity").and_then(Value::as_f64) {
-            parts.push(format!("{h}% RH"));
-        }
+    if has_capability(dev, device_capabilities::HUMIDITY_SENSOR)
+        && let Some(h) = dev.get("humidity").and_then(Value::as_f64)
+    {
+        parts.push(format!("{h}% RH"));
     }
     append_low_battery_if_needed(dev, parts, printer);
     if dev.get("error_code").and_then(Value::as_i64).unwrap_or(0) > 0 {
@@ -340,10 +340,10 @@ fn format_sensor_or_router_metrics(dev: &Value, printer: ConsolePrinter) -> Stri
     if let Some(tc) = dev.get("temperature_current").and_then(Value::as_f64) {
         parts.push(format!("{tc}°C"));
     }
-    if has_capability(dev, device_capabilities::HUMIDITY_SENSOR) {
-        if let Some(h) = dev.get("humidity").and_then(Value::as_f64) {
-            parts.push(format!("{h}% RH"));
-        }
+    if has_capability(dev, device_capabilities::HUMIDITY_SENSOR)
+        && let Some(h) = dev.get("humidity").and_then(Value::as_f64)
+    {
+        parts.push(format!("{h}% RH"));
     }
     append_low_battery_if_needed(dev, &mut parts, printer);
     parts.join(" · ")

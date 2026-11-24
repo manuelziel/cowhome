@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use crate::cli::import_export::ConfigFormat;
 use crate::cli::output::write_stdout_line;
-use crate::cli::setup_args::{parse_setup_invocation, SetupAction};
+use crate::cli::setup_args::{SetupAction, parse_setup_invocation};
 use crate::core::constants::{
     app_meta::{NAME, SOFTWARE_NAME, VERSION},
     diagnostics_defaults::{DEFAULT_LOG_LIMIT, MAX_LOG_LIMIT},
@@ -140,8 +140,8 @@ pub fn parse_cli_args(args: &[String]) -> AppResult<ParsedCli> {
 fn expand_inline_equals_flags(args: &[String]) -> Vec<String> {
     let mut out = Vec::with_capacity(args.len() + 2);
     for token in args {
-        if let Some((flag, val)) = token.split_once('=') {
-            if matches!(
+        if let Some((flag, val)) = token.split_once('=')
+            && matches!(
                 flag,
                 "--file"
                     | "-f"
@@ -151,11 +151,11 @@ fn expand_inline_equals_flags(args: &[String]) -> Vec<String> {
                     | "--range"
                     | "--limit"
                     | "--device"
-            ) {
-                out.push(flag.to_owned());
-                out.push(val.to_owned());
-                continue;
-            }
+            )
+        {
+            out.push(flag.to_owned());
+            out.push(val.to_owned());
+            continue;
         }
         out.push(token.clone());
     }
@@ -347,7 +347,7 @@ fn parse_export_args(args: &[String]) -> AppResult<CliCommand> {
             other => {
                 return Err(AppError::Usage(format!(
                     "Unexpected export option '{other}'"
-                )))
+                )));
             }
         }
     }
@@ -412,7 +412,7 @@ fn parse_import_args(args: &[String]) -> AppResult<CliCommand> {
             other => {
                 return Err(AppError::Usage(format!(
                     "Unexpected import option '{other}'"
-                )))
+                )));
             }
         }
     }
@@ -470,7 +470,7 @@ Actions:
 
 Options:
   --file, -f <path>             Use explicit configuration file path
-  --range <window>              Diagnostics range: 24h|7d|30d|90d|180d|365d|all
+  --range <window>              Range: 24h|7d|30d|90d|180d|365d|1y|all
   --limit <1..{MAX_LOG_LIMIT}>              Diagnostics log line limit (default: {DEFAULT_LOG_LIMIT})
   --device <filter>             Diagnostics optional device filter
   --interactive, -i             Launch interactive runtime menu

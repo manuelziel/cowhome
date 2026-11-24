@@ -12,8 +12,8 @@ use tokio::sync::watch;
 
 use super::maintenance::init_prune_date_guard;
 use super::state_builder::{
-    apply_software_group_authority, build_device_state, build_software_group_ain_map,
-    resolve_display_name, TEMP_CHANGE_THRESHOLD,
+    TEMP_CHANGE_THRESHOLD, apply_software_group_authority, build_device_state,
+    build_software_group_ain_map, resolve_display_name,
 };
 use super::sync_logic::{preserve_enriched_twin_state, resolve_effective_user_target};
 use crate::core::constants::service_defaults::{
@@ -316,13 +316,12 @@ impl FritzPollingWorker {
             let eff_t =
                 resolve_effective_user_target(&self.registry, &dev.ain, raw_t, None, now_ts);
             current_targets.insert(dev.normalized_ain.clone(), eff_t);
-            if let Some(prev) = self.registry.get_device(&dev.ain) {
-                if prev
+            if let Some(prev) = self.registry.get_device(&dev.ain)
+                && prev
                     .as_thermostat()
                     .is_some_and(|t| t.target_hold_until > now_ts)
-                {
-                    last_targets.insert(dev.normalized_ain.clone(), eff_t);
-                }
+            {
+                last_targets.insert(dev.normalized_ain.clone(), eff_t);
             }
         }
 

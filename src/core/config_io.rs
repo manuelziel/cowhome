@@ -111,14 +111,13 @@ fn run_sudo_config_install(
 /// # Errors
 /// Returns [`AppError::Config`] if `sudo mkdir -p` fails.
 fn ensure_sudo_parent_dir(target_path: &Path, timeout: Duration) -> AppResult<()> {
-    if let Some(parent_str) = target_path.parent().and_then(Path::to_str) {
-        if !parent_str.is_empty()
-            && !run_command_inherited("sudo", &["--", "mkdir", "-p", "--", parent_str], timeout)?
-        {
-            return Err(AppError::Config(format!(
-                "Failed creating directory '{parent_str}' via sudo"
-            )));
-        }
+    if let Some(parent_str) = target_path.parent().and_then(Path::to_str)
+        && !parent_str.is_empty()
+        && !run_command_inherited("sudo", &["--", "mkdir", "-p", "--", parent_str], timeout)?
+    {
+        return Err(AppError::Config(format!(
+            "Failed creating directory '{parent_str}' via sudo"
+        )));
     }
     Ok(())
 }

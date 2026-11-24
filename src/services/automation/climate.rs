@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::DateTime;
 use chrono_tz::Tz;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::actuation::apply_twin_thermostat_target;
 use crate::core::domain_constants::{
@@ -301,10 +301,10 @@ async fn resolve_vacation_exempt_ains(
         return exempt;
     }
     for dev in registry.get_all_devices() {
-        if let Some(ref gid) = dev.group_id {
-            if ignored_gids.contains(gid.trim_start_matches(GROUP_ID_PREFIX)) {
-                exempt.insert(normalize_ain(&dev.ain));
-            }
+        if let Some(ref gid) = dev.group_id
+            && ignored_gids.contains(gid.trim_start_matches(GROUP_ID_PREFIX))
+        {
+            exempt.insert(normalize_ain(&dev.ain));
         }
     }
     if let Ok(groups) = db.run_blocking(|d| d.get_all_software_groups()).await {
@@ -313,10 +313,9 @@ async fn resolve_vacation_exempt_ains(
                 .get("id")
                 .and_then(Value::as_str)
                 .is_some_and(|id| ignored_gids.contains(id))
+                && let Some(arr) = grp.get("members").and_then(Value::as_array)
             {
-                if let Some(arr) = grp.get("members").and_then(Value::as_array) {
-                    exempt.extend(arr.iter().filter_map(Value::as_str).map(normalize_ain));
-                }
+                exempt.extend(arr.iter().filter_map(Value::as_str).map(normalize_ain));
             }
         }
     }

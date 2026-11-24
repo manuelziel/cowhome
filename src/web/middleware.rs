@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use axum::extract::{ConnectInfo, Request, State};
-use axum::http::{header, HeaderMap, HeaderValue};
+use axum::http::{HeaderMap, HeaderValue, header};
 use axum::middleware::Next;
 use axum::response::Response;
 
@@ -20,8 +20,8 @@ use crate::core::constants::{
     route_paths::{
         FORBIDDEN_QUERY_KEY_NAMES, HEADER_API_KEY, HEADER_AUTHORIZATION,
         HEADER_CONTENT_TYPE_OPTIONS, HEADER_FORWARDED_FOR, HEADER_REAL_IP,
-        HEADER_VAL_CACHE_NO_STORE, HEADER_VAL_FRAME_DENY, HEADER_VAL_NOSNIFF,
-        HEADER_VAL_NO_REFERRER,
+        HEADER_VAL_CACHE_NO_STORE, HEADER_VAL_FRAME_DENY, HEADER_VAL_NO_REFERRER,
+        HEADER_VAL_NOSNIFF,
     },
     service_defaults::RATE_LIMIT_MINUTE_WINDOW_SECS as MINUTE_WINDOW_SECS,
 };

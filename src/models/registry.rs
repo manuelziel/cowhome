@@ -219,12 +219,11 @@ impl StateRegistry {
                 product_name: dev.product_name.clone(),
             };
             let norm = normalize_ain(&dev.ain);
-            if let Some((base, suffix)) = norm.rsplit_once('-') {
-                if suffix.chars().all(|c| c.is_ascii_digit())
-                    && base.chars().all(|c| c.is_ascii_digit())
-                {
-                    out.entry(base.to_owned()).or_insert_with(|| snap.clone());
-                }
+            if let Some((base, suffix)) = norm.rsplit_once('-')
+                && suffix.chars().all(|c| c.is_ascii_digit())
+                && base.chars().all(|c| c.is_ascii_digit())
+            {
+                out.entry(base.to_owned()).or_insert_with(|| snap.clone());
             }
             out.insert(norm, snap);
         }

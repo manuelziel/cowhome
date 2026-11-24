@@ -217,11 +217,9 @@ fn eval_15m_spikes(
         max_drh = max_drh.max(rh_now - s.rh_pct);
         max_dx = max_dx.max(abs_now - calculate_absolute_humidity(s.temp_c, s.rh_pct));
     }
-    if !any_in_win {
-        if let Some(first) = ordered.first() {
-            max_drh = max_drh.max(rh_now - first.rh_pct);
-            max_dx = max_dx.max(abs_now - calculate_absolute_humidity(first.temp_c, first.rh_pct));
-        }
+    if !any_in_win && let Some(first) = ordered.first() {
+        max_drh = max_drh.max(rh_now - first.rh_pct);
+        max_dx = max_dx.max(abs_now - calculate_absolute_humidity(first.temp_c, first.rh_pct));
     }
     (max_drh, max_dx)
 }

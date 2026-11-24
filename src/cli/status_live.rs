@@ -100,10 +100,10 @@ async fn fetch_and_render_router(
     if !resp.status().is_success() {
         return false;
     }
-    if let Ok(json) = resp.json::<Value>().await {
-        if let Some(data) = json.get("data") {
-            render_router_section(data, printer);
-        }
+    if let Ok(json) = resp.json::<Value>().await
+        && let Some(data) = json.get("data")
+    {
+        render_router_section(data, printer);
     }
     true
 }
@@ -119,14 +119,11 @@ where
         .header(HEADER_AUTHORIZATION, auth)
         .send()
         .await
+        && resp.status().is_success()
+        && let Ok(json) = resp.json::<Value>().await
+        && let Some(data) = json.get("data")
     {
-        if resp.status().is_success() {
-            if let Ok(json) = resp.json::<Value>().await {
-                if let Some(data) = json.get("data") {
-                    render_fn(data);
-                }
-            }
-        }
+        render_fn(data);
     }
 }
 

@@ -5,11 +5,11 @@
 
 use std::sync::Arc;
 
+use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::middleware;
 use axum::response::Response;
 use axum::routing::{get, post};
-use axum::Router;
 
 use super::handlers::{
     automation::{
@@ -28,7 +28,7 @@ use super::response::ApiError;
 use super::state::AppState;
 use crate::core::constants::{
     route_paths::{
-        AUTOMATION, AUTOMATION_FEATURE, DEVICE_ACTION, DOCS_UI, GROUPS, GROUP_ITEM, HISTORY,
+        AUTOMATION, AUTOMATION_FEATURE, DEVICE_ACTION, DOCS_UI, GROUP_ITEM, GROUPS, HISTORY,
         OPENAPI_SPEC, STATE, SYSTEM_AI_DIAGNOSTICS, SYSTEM_CALLS, SYSTEM_DIAGNOSTICS,
         SYSTEM_ENERGY, SYSTEM_HOSTS, SYSTEM_SETTINGS, SYSTEM_STATUS, SYSTEM_STORAGE, WEATHER,
     },

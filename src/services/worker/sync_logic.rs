@@ -15,7 +15,7 @@ use crate::core::domain_constants::{
     hardware::device_types,
 };
 use crate::core::psychrometrics::{
-    calculate_apparent_temperature, compute_device_psychrometrics, DevicePsychrometricsInput,
+    DevicePsychrometricsInput, calculate_apparent_temperature, compute_device_psychrometrics,
 };
 use crate::core::time_util::normalize_ain;
 use crate::models::device::{DeviceState, ThermostatFields};
@@ -50,21 +50,19 @@ pub fn resolve_effective_user_target(
     if t_prev.target_hold_until > now_ts && user_t > 0.0 {
         return user_t;
     }
-    if let Some(hw_t) = t_prev.hardware_target_temperature {
-        if (hw_t - user_t).abs() > TEMP_CHANGE_THRESHOLD
-            && ((reported_target - hw_t).abs() <= TEMP_CHANGE_THRESHOLD
-                || (reported_target - user_t).abs() <= TEMP_CHANGE_THRESHOLD)
-        {
-            return user_t;
-        }
+    if let Some(hw_t) = t_prev.hardware_target_temperature
+        && (hw_t - user_t).abs() > TEMP_CHANGE_THRESHOLD
+        && ((reported_target - hw_t).abs() <= TEMP_CHANGE_THRESHOLD
+            || (reported_target - user_t).abs() <= TEMP_CHANGE_THRESHOLD)
+    {
+        return user_t;
     }
-    if let Some(prev_raw) = registry.get_raw_reported_target(ain) {
-        if user_t > 0.0
-            && (reported_target - user_t).abs() > TEMP_CHANGE_THRESHOLD
-            && (reported_target - prev_raw).abs() <= TEMP_CHANGE_THRESHOLD
-        {
-            return user_t;
-        }
+    if let Some(prev_raw) = registry.get_raw_reported_target(ain)
+        && user_t > 0.0
+        && (reported_target - user_t).abs() > TEMP_CHANGE_THRESHOLD
+        && (reported_target - prev_raw).abs() <= TEMP_CHANGE_THRESHOLD
+    {
+        return user_t;
     }
     reported_target
 }
@@ -144,12 +142,11 @@ fn preserve_thermostat_targets(
         if (eff_target - raw_reported).abs() > TEMP_CHANGE_THRESHOLD {
             t_cur.temperature_target = eff_target;
             t_cur.hardware_target_temperature = t_prev.hardware_target_temperature;
-        } else if let Some(prev_hw) = t_prev.hardware_target_temperature {
-            if (prev_hw - t_prev.temperature_target).abs() > TEMP_CHANGE_THRESHOLD
-                && (raw_reported - t_prev.temperature_target).abs() <= TEMP_CHANGE_THRESHOLD
-            {
-                t_cur.hardware_target_temperature = Some(prev_hw);
-            }
+        } else if let Some(prev_hw) = t_prev.hardware_target_temperature
+            && (prev_hw - t_prev.temperature_target).abs() > TEMP_CHANGE_THRESHOLD
+            && (raw_reported - t_prev.temperature_target).abs() <= TEMP_CHANGE_THRESHOLD
+        {
+            t_cur.hardware_target_temperature = Some(prev_hw);
         }
     }
 }
@@ -187,13 +184,13 @@ fn sync_thermostat_reference_sensor(
         state.humidity = prev.humidity;
     }
     let hum = state.humidity;
-    if let Some(t_cur) = state.as_thermostat_mut() {
-        if let Some(rh) = hum.filter(|&h| t_cur.temperature_current > 0.0 && h > 0.0) {
-            t_cur.apparent_temperature = Some(calculate_apparent_temperature(
-                t_cur.temperature_current,
-                rh,
-            ));
-        }
+    if let Some(t_cur) = state.as_thermostat_mut()
+        && let Some(rh) = hum.filter(|&h| t_cur.temperature_current > 0.0 && h > 0.0)
+    {
+        t_cur.apparent_temperature = Some(calculate_apparent_temperature(
+            t_cur.temperature_current,
+            rh,
+        ));
     }
 }
 
@@ -230,14 +227,14 @@ fn enrich_polled_psychrometrics(
         guard_active: state.humidity_guard_active,
         rule_active: false,
     });
-    if let Some(prev) = prev_state {
-        if prev.ventilation_advice.is_some() {
-            psych
-                .ventilation_advice
-                .clone_from(&prev.ventilation_advice);
-            if state.humidity_guard_active && prev.projected_base_humidity_pct.is_some() {
-                psych.projected_base_humidity_pct = prev.projected_base_humidity_pct;
-            }
+    if let Some(prev) = prev_state
+        && prev.ventilation_advice.is_some()
+    {
+        psych
+            .ventilation_advice
+            .clone_from(&prev.ventilation_advice);
+        if state.humidity_guard_active && prev.projected_base_humidity_pct.is_some() {
+            psych.projected_base_humidity_pct = prev.projected_base_humidity_pct;
         }
     }
     state.apply_psychrometrics(psych);

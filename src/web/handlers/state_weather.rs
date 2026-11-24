@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::{Query, State};
-use axum::http::{header, HeaderValue, StatusCode};
+use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{Html, IntoResponse, Response};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::core::constants::embedded_assets::{OPENAPI_SPEC_YAML, SWAGGER_UI_HTML};
 use crate::core::domain_constants::{
@@ -18,10 +18,10 @@ use crate::core::domain_constants::{
 };
 use crate::core::energy_analytics::EnergySummary;
 use crate::core::error::AppError;
-use crate::core::psychrometrics::{compute_device_psychrometrics, DevicePsychrometricsInput};
+use crate::core::psychrometrics::{DevicePsychrometricsInput, compute_device_psychrometrics};
 use crate::db::efficiency::AnalyticsContext;
 use crate::db::history::HistoryQuery;
-use crate::web::response::{api_success, ApiError, ApiResult};
+use crate::web::response::{ApiError, ApiResult, api_success};
 use crate::web::state::AppState;
 
 // =============================================================================

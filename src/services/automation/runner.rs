@@ -11,16 +11,16 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
-use serde_json::{json, Value};
-use tokio::sync::{watch, Mutex};
+use serde_json::{Value, json};
+use tokio::sync::{Mutex, watch};
 
 use super::chain::extract_group_members;
 use super::scopes::{
-    clear_reference_sensors, parse_feature_cfg, restore_unlinked_thermostats, ScopeConfigMap,
+    ScopeConfigMap, clear_reference_sensors, parse_feature_cfg, restore_unlinked_thermostats,
 };
 use super::trace::{
-    build_cycle_evaluation_trace, resolve_device_schedule_slot_id,
-    sync_thermostat_group_paused_reasons, RuleSet,
+    RuleSet, build_cycle_evaluation_trace, resolve_device_schedule_slot_id,
+    sync_thermostat_group_paused_reasons,
 };
 use crate::core::constants::service_defaults::{
     WORKER_MIN_SLEEP_SECS as MIN_SLEEP_SECS, WORKER_STARTUP_DELAY_SECS as STARTUP_DELAY_SECS,
@@ -36,8 +36,8 @@ use crate::core::domain_constants::{
 };
 use crate::core::logger::Logger;
 use crate::core::time_util::{normalize_ain, resolve_home_tz};
-use crate::db::efficiency::AnalyticsContext;
 use crate::db::Database;
+use crate::db::efficiency::AnalyticsContext;
 use crate::models::automation::{ApparentTemperatureConfig, VacationModeConfig};
 use crate::models::registry::StateRegistry;
 use crate::services::fritz::{FritzAhaClient, FritzTr064Client};

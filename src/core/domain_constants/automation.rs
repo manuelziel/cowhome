@@ -33,8 +33,7 @@ pub mod weather_defaults {
     /// Sentinel weather code when telemetry is unavailable.
     pub const UNKNOWN_WEATHER_CODE: i32 = -1;
     /// Current-weather query parameters requested from Open-Meteo.
-    pub const CURRENT_VARS: &str =
-        "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature,is_day";
+    pub const CURRENT_VARS: &str = "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature,is_day";
     /// Hourly forecast query parameters requested from Open-Meteo.
     pub const HOURLY_VARS: &str = "temperature_2m,weather_code,is_day";
     /// Daily forecast query parameters requested from Open-Meteo.

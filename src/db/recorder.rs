@@ -6,11 +6,11 @@
 
 use std::collections::HashMap;
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::{Map, Value};
 
-use super::entities_sync::resolve_entity_on;
 use super::Database;
+use super::entities_sync::resolve_entity_on;
 use crate::core::domain_constants::{
     analytics::history_defaults::{
         DEADBAND_BATTERY_PCT, DEADBAND_ENERGY_WH, DEADBAND_HUMIDITY_PCT, DEADBAND_POWER_RATIO,
@@ -235,10 +235,10 @@ impl Database {
         name: &str,
         device_type: &str,
     ) -> AppResult<Option<(Map<String, Value>, f64)>> {
-        if let Ok(caches) = self.inner.recorder_caches.lock() {
-            if let Some(entry) = caches.state_saved.get(ain) {
-                return Ok(Some(entry.clone()));
-            }
+        if let Ok(caches) = self.inner.recorder_caches.lock()
+            && let Some(entry) = caches.state_saved.get(ain)
+        {
+            return Ok(Some(entry.clone()));
         }
         let eid = self.register_entity_on(conn, ain, name, device_type)?;
         let Some(snapshot) = query_latest_snapshot_on(conn, eid)? else {

@@ -1,8 +1,9 @@
 //! Frequency-ordered interactive `Runtime` main menu (`cowhome` without arguments).
 //!
 //! Strictly adheres to `_project-resources/docs/design_guidelines.md` Section 8:
-//! dynamically numbers options from [`RUNTIME_MENU_ITEMS`] (`Status`, `Configure`,
-//! `Start`, `Stop`, `Restart`, `Validate Configuration`, `Setup / Maintenance`, `Help`).
+//! dynamically numbers the 7 canonical operational options from [`RUNTIME_MENU_ITEMS`]
+//! (`Status`, `Configure`, `Start`, `Stop`, `Restart`, `Validate Configuration`, `Help`)
+//! plus `0) Exit`.
 
 use std::path::Path;
 use std::time::Duration;
@@ -11,9 +12,8 @@ use crate::cli::args::print_help;
 use crate::cli::config_menu::run_config_menu;
 use crate::cli::input::{read_menu_choice_once, resolve_menu_action, wait_for_enter};
 use crate::cli::output::ConsolePrinter;
-use crate::cli::setup_menu::run_setup_menu;
 use crate::cli::status_view::{show_runtime_header_status, show_runtime_status};
-use crate::core::config::{load_runtime_config_lenient, validate_config_file, AppConfig};
+use crate::core::config::{AppConfig, load_runtime_config_lenient, validate_config_file};
 use crate::core::constants::{
     fhs_paths::SYSTEMD_UNIT_NAME,
     service_defaults::{ELEVATED_CONFIG_TIMEOUT_SECS, SUDO_TIMEOUT_SECS},
@@ -29,7 +29,7 @@ use crate::setup::systemd::control_service_unit;
 enum RuntimeMenuAction {
     /// Show service, storage, and live device status.
     Status,
-    /// Open interactive configuration & sysadmin manager.
+    /// Open interactive configuration submenu (`0) Back`).
     Configure,
     /// Start `cowhome.service`.
     Start,
@@ -39,13 +39,11 @@ enum RuntimeMenuAction {
     Restart,
     /// Validate `config.toml` syntax, schema, and security policy.
     Validate,
-    /// Open interactive system setup / maintenance menu.
-    Setup,
     /// Show CLI usage help.
     Help,
 }
 
-/// Canonical operational menu order (`design_guidelines.md` § 8).
+/// Canonical 7-item operational menu order (`design_guidelines.md` § 8).
 const RUNTIME_MENU_ITEMS: &[(RuntimeMenuAction, &str)] = &[
     (RuntimeMenuAction::Status, "Status"),
     (RuntimeMenuAction::Configure, "Configure"),
@@ -53,7 +51,6 @@ const RUNTIME_MENU_ITEMS: &[(RuntimeMenuAction, &str)] = &[
     (RuntimeMenuAction::Stop, "Stop"),
     (RuntimeMenuAction::Restart, "Restart"),
     (RuntimeMenuAction::Validate, "Validate Configuration"),
-    (RuntimeMenuAction::Setup, "Setup / Maintenance"),
     (RuntimeMenuAction::Help, "Help"),
 ];
 
@@ -154,13 +151,6 @@ fn handle_menu_selection(
             }
             return Ok(true);
         }
-        Some(RuntimeMenuAction::Setup) => {
-            if let Err(err) = run_setup_menu(false, ctx.debug_override, ctx.logger, ctx.printer) {
-                report_non_cancelled(&err, ctx.printer);
-                return Ok(wait_for_enter().is_ok());
-            }
-            return Ok(true);
-        }
         Some(act) => execute_paused_action(act, ctx),
         None => ctx.printer.print_error(&format!(
             "Invalid selection. Enter a number between 0 and {max_choice}."
@@ -170,13 +160,13 @@ fn handle_menu_selection(
 }
 
 // =============================================================================
-/// Opens `cowhome config` directly or elevates via `sudo` when `/etc/cowhome` is `0750`.
+/// Opens `cowhome config` (`nested = true`) or elevates via `sudo` when `/etc/cowhome` is `0750`.
 ///
 /// # Errors
 /// Returns [`AppError`] if interactive editing or `sudo` elevation fails.
 fn launch_config_editor(ctx: &RuntimeActionCtx<'_>) -> AppResult<()> {
     if !ctx.cfg_locked {
-        return run_config_menu(ctx.config, ctx.config_path, ctx.logger, ctx.printer);
+        return run_config_menu(ctx.config, ctx.config_path, true, ctx.logger, ctx.printer);
     }
     elevate_subcommand_via_sudo("config", None, ctx.debug_override, ctx.printer)
 }
@@ -218,7 +208,7 @@ fn execute_paused_action(action: RuntimeMenuAction, ctx: &RuntimeActionCtx<'_>) 
             print_help();
             Ok(())
         }
-        RuntimeMenuAction::Configure | RuntimeMenuAction::Setup => Ok(()),
+        RuntimeMenuAction::Configure => Ok(()),
     };
     if let Err(err) = result {
         report_non_cancelled(&err, ctx.printer);

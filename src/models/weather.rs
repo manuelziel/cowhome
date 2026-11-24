@@ -36,12 +36,12 @@ pub struct CurrentWeather {
 impl CurrentWeather {
     /// Computes and populates `dew_point_c` and `abs_humidity_gm3` when temp & RH are valid.
     pub fn enrich_psychrometrics(&mut self) {
-        if let (Some(temp), Some(rh)) = (self.temperature, self.humidity) {
-            if rh > 0.0 {
-                self.dew_point_c = Some(calculate_dew_point(temp, rh));
-                self.abs_humidity_gm3 = Some(calculate_absolute_humidity(temp, rh));
-                return;
-            }
+        if let (Some(temp), Some(rh)) = (self.temperature, self.humidity)
+            && rh > 0.0
+        {
+            self.dew_point_c = Some(calculate_dew_point(temp, rh));
+            self.abs_humidity_gm3 = Some(calculate_absolute_humidity(temp, rh));
+            return;
         }
         self.dew_point_c = None;
         self.abs_humidity_gm3 = None;

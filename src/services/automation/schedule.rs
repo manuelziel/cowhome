@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Datelike, Duration as ChronoDuration, Timelike};
 use chrono_tz::Tz;
 
-use super::actuation::{dispatch_thermostat_target, RULE_TEMP_EPSILON};
+use super::actuation::{RULE_TEMP_EPSILON, dispatch_thermostat_target};
 use super::schedule_slots::{parse_day_blocks, resolve_comfort_slot_id, resolve_eco_slot_id};
 use crate::core::domain_constants::{
     automation::{automation_identifiers::WEEKDAYS, sync_defaults::TARGET_HOLD_SECONDS},
@@ -88,7 +88,7 @@ impl HeatingScheduleRule {
     pub fn manual_override_ains(&self) -> HashSet<String> {
         self.manual_override_by_ain
             .iter()
-            .filter(|(_, &active)| active)
+            .filter(|&(_, &active)| active)
             .map(|(k, _)| k.clone())
             .collect()
     }

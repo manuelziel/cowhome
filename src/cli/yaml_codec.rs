@@ -215,12 +215,11 @@ fn resolve_mapping_value(
     if !val_part.is_empty() {
         return Ok(parse_yaml_scalar(val_part));
     }
-    if let Some(&next) = lines.get(*pos) {
-        if next.indent > parent_indent
-            || (next.indent == parent_indent && is_sequence_item(next.content))
-        {
-            return parse_yaml_block(lines, pos);
-        }
+    if let Some(&next) = lines.get(*pos)
+        && (next.indent > parent_indent
+            || (next.indent == parent_indent && is_sequence_item(next.content)))
+    {
+        return parse_yaml_block(lines, pos);
     }
     Ok(Value::Object(Map::new()))
 }
@@ -268,11 +267,12 @@ fn parse_sequence_element(
         let mut obj = Map::new();
         let first_val = resolve_mapping_value(lines, pos, seq_indent + 1, v)?;
         obj.insert(unquote_yaml_key(k), first_val);
-        if let Some(&next) = lines.get(*pos) {
-            if next.indent > seq_indent && !is_sequence_item(next.content) {
-                let tail = parse_yaml_mapping(lines, pos, next.indent)?;
-                obj.extend(tail);
-            }
+        if let Some(&next) = lines.get(*pos)
+            && next.indent > seq_indent
+            && !is_sequence_item(next.content)
+        {
+            let tail = parse_yaml_mapping(lines, pos, next.indent)?;
+            obj.extend(tail);
         }
         return Ok(Value::Object(obj));
     }
@@ -346,16 +346,18 @@ pub fn parse_yaml_scalar(raw: &str) -> Value {
     if raw == "[]" {
         return Value::Array(Vec::new());
     }
-    if (raw.starts_with('[') && raw.ends_with(']')) || (raw.starts_with('{') && raw.ends_with('}'))
+    if ((raw.starts_with('[') && raw.ends_with(']'))
+        || (raw.starts_with('{') && raw.ends_with('}')))
+        && let Ok(flow) = serde_json::from_str::<Value>(raw)
     {
-        if let Ok(flow) = serde_json::from_str::<Value>(raw) {
-            return flow;
-        }
+        return flow;
     }
-    if raw.starts_with('"') && raw.ends_with('"') && raw.len() >= 2 {
-        if let Ok(Value::String(s)) = serde_json::from_str::<Value>(raw) {
-            return Value::String(s);
-        }
+    if raw.starts_with('"')
+        && raw.ends_with('"')
+        && raw.len() >= 2
+        && let Ok(Value::String(s)) = serde_json::from_str::<Value>(raw)
+    {
+        return Value::String(s);
     }
     if let Some(inner) = raw.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')) {
         return Value::String(inner.replace("''", "'"));
@@ -383,10 +385,10 @@ fn parse_unquoted_scalar(raw: &str) -> Value {
         if let Ok(i) = raw.parse::<i64>() {
             return Value::Number(i.into());
         }
-        if let Ok(f) = raw.parse::<f64>() {
-            if let Some(num) = Number::from_f64(f) {
-                return Value::Number(num);
-            }
+        if let Ok(f) = raw.parse::<f64>()
+            && let Some(num) = Number::from_f64(f)
+        {
+            return Value::Number(num);
         }
     }
     Value::String(raw.to_owned())

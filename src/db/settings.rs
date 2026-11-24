@@ -3,7 +3,7 @@
 //! Provides LWW-protected zero-write upserts for bounded numeric system settings (tariffs,
 //! base fees) and CowHome's authoritative thermostat calibration offsets (`-5.0..=+5.0 °C`).
 
-use rusqlite::{params, OptionalExtension};
+use rusqlite::{OptionalExtension, params};
 use serde_json::Value;
 
 use super::Database;
@@ -93,12 +93,12 @@ impl Database {
             .optional()
             .map_err(AppError::from)
         });
-        if let Ok(Some(text)) = fetched {
-            if let Ok(val) = text.trim().parse::<f64>() {
-                if val.is_finite() && (min_val..=max_val).contains(&val) {
-                    return round_decimals(val, decimals);
-                }
-            }
+        if let Ok(Some(text)) = fetched
+            && let Ok(val) = text.trim().parse::<f64>()
+            && val.is_finite()
+            && (min_val..=max_val).contains(&val)
+        {
+            return round_decimals(val, decimals);
         }
         default
     }
@@ -168,7 +168,7 @@ fn parse_strict_f64(raw: &Value, field_name: &str) -> AppResult<f64> {
         _ => {
             return Err(AppError::Validation(format!(
                 "{field_name} must be a number"
-            )))
+            )));
         }
     };
     if !val.is_finite() {

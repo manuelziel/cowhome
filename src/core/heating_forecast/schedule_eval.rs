@@ -243,10 +243,11 @@ fn compute_weekday_schedule_target(
 ) -> f64 {
     let mut intervals: Vec<(u16, u16, f64)> = Vec::new();
     for p_slot in prev_slots {
-        if let Some((s, e, t)) = extract_slot_span(p_slot, comfort_temp) {
-            if s > e && e > 0 {
-                intervals.push((0, e, t));
-            }
+        if let Some((s, e, t)) = extract_slot_span(p_slot, comfort_temp)
+            && s > e
+            && e > 0
+        {
+            intervals.push((0, e, t));
         }
     }
     for slot in slots {
@@ -342,13 +343,13 @@ fn is_slot_disabled(obj: &serde_json::Map<String, Value>) -> bool {
         }
     }
     for key in ["mode", "type", "preset"] {
-        if let Some(s) = obj.get(key).and_then(Value::as_str) {
-            if matches!(
+        if let Some(s) = obj.get(key).and_then(Value::as_str)
+            && matches!(
                 s.trim().to_ascii_lowercase().as_str(),
                 "off" | "eco" | "absenk" | "false" | "0"
-            ) {
-                return true;
-            }
+            )
+        {
+            return true;
         }
     }
     false

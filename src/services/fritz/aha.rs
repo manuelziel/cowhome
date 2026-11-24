@@ -12,7 +12,7 @@ use reqwest::Client;
 use serde::Serialize;
 use tokio::sync::Mutex as AsyncMutex;
 
-use super::aha_xml::{parse_device_list_xml, ParsedDeviceList, RawAhaDevice};
+use super::aha_xml::{ParsedDeviceList, RawAhaDevice, parse_device_list_xml};
 use super::auth::{build_aha_base_url, is_valid_sid, login_aha_sid, percent_encode_component};
 use crate::core::constants::service_defaults::DEFAULT_FRITZBOX_TIMEOUT_SECS;
 use crate::core::domain_constants::hardware::{
@@ -345,12 +345,11 @@ impl FritzAhaClient {
     /// Returns [`AppError`] if acquiring a session ID fails.
     async fn ensure_sid(&self, force_refresh: bool) -> AppResult<String> {
         let mut guard = self.sid.lock().await;
-        if !force_refresh {
-            if let Some(ref existing) = *guard {
-                if is_valid_sid(existing) {
-                    return Ok(existing.clone());
-                }
-            }
+        if !force_refresh
+            && let Some(ref existing) = *guard
+            && is_valid_sid(existing)
+        {
+            return Ok(existing.clone());
         }
         let cfg = self.read_endpoint()?;
         let fresh = login_aha_sid(&self.http, &cfg.base_url, &cfg.username, &cfg.password).await?;

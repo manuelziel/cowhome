@@ -6,7 +6,7 @@
 
 use std::time::Duration;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::core::config::AppConfig;
 use crate::core::constants::{
@@ -83,26 +83,24 @@ pub fn collect_active_alerts(health: &Value, domain: &Value, has_weather: bool) 
         }
     }
 
-    if has_weather {
-        if let Some(ws_chk) = health.pointer("/adapters/weather_service") {
-            let st = ws_chk
-                .get("status")
+    if has_weather && let Some(ws_chk) = health.pointer("/adapters/weather_service") {
+        let st = ws_chk
+            .get("status")
+            .and_then(Value::as_str)
+            .unwrap_or("pass");
+        if matches!(st, "warn" | "fail") {
+            let pstate = ws_chk
+                .get("provider_state")
                 .and_then(Value::as_str)
-                .unwrap_or("pass");
-            if matches!(st, "warn" | "fail") {
-                let pstate = ws_chk
-                    .get("provider_state")
-                    .and_then(Value::as_str)
-                    .unwrap_or("unknown");
-                alerts.push(json!({
-                    "severity": "warning",
-                    "category": "adapter",
-                    "code": ALERT_WEATHER_DEGRADED,
-                    "device": WEATHER_AIN,
-                    "name": WEATHER_NAME,
-                    "message": format!("Weather service state is '{pstate}'"),
-                }));
-            }
+                .unwrap_or("unknown");
+            alerts.push(json!({
+                "severity": "warning",
+                "category": "adapter",
+                "code": ALERT_WEATHER_DEGRADED,
+                "device": WEATHER_AIN,
+                "name": WEATHER_NAME,
+                "message": format!("Weather service state is '{pstate}'"),
+            }));
         }
     }
 

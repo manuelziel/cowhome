@@ -11,10 +11,10 @@ use crate::core::constants::fhs_paths::{
     BINARY_PATH, CONFIG_DIR, CONFIG_FILE, DESKTOP_ENTRY_PATH, STATE_DIR,
 };
 use crate::core::process::run_command_captured;
-use crate::core::security::{probe_path_presence, PathPresence};
+use crate::core::security::{PathPresence, probe_path_presence};
 use crate::core::time_util::format_epoch_local_human;
-use crate::setup::deps::{check_internet_connected, inspect_dependencies, DependencyReport};
-use crate::setup::systemd::{query_unit_status, ServiceUnitStatus};
+use crate::setup::deps::{DependencyReport, check_internet_connected, inspect_dependencies};
+use crate::setup::systemd::{ServiceUnitStatus, query_unit_status};
 
 // =============================================================================
 /// Metadata of the installed `/usr/local/bin/<name>` binary (`Version`, `Size`, `Modified`).

@@ -420,10 +420,11 @@ pub fn normalize_config_payload(feature_name: &str, raw: &Value) -> Value {
         .collect();
 
     for &(feat, alias, canonical) in CONFIG_KEY_ALIASES {
-        if feat == feature_name && !map.contains_key(canonical) {
-            if let Some(val) = map.get(alias).cloned() {
-                map.insert(canonical.to_owned(), val);
-            }
+        if feat == feature_name
+            && !map.contains_key(canonical)
+            && let Some(val) = map.get(alias).cloned()
+        {
+            map.insert(canonical.to_owned(), val);
         }
     }
     for list_key in ["actor_ain", "affected_devices", "target_ains"] {
@@ -466,10 +467,10 @@ fn normalize_schedule_days_in_place(map: &mut Map<String, Value>) {
     if !source.is_empty() {
         let mut clean_days = Map::new();
         for (k, v) in source {
-            if let Some(canon) = canonical_weekday_key(&k) {
-                if v.is_array() {
-                    clean_days.insert(canon.to_owned(), v);
-                }
+            if let Some(canon) = canonical_weekday_key(&k)
+                && v.is_array()
+            {
+                clean_days.insert(canon.to_owned(), v);
             }
         }
         map.insert(String::from("days"), Value::Object(clean_days));

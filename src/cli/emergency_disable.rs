@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 use rusqlite::OptionalExtension;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::cli::input::prompt_confirm;
 use crate::cli::output::ConsolePrinter;

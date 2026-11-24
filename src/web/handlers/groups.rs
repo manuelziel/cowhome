@@ -10,14 +10,14 @@ use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::Response;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::core::domain_constants::hardware::special_devices::GROUP_ID_PREFIX;
 use crate::core::error::AppError;
 use crate::core::time_util::normalize_ain;
 use crate::models::group::parse_group_id;
 use crate::web::response::{
-    api_created, api_success, extract_request_timestamp, parse_json_object, ApiError, ApiResult,
+    ApiError, ApiResult, api_created, api_success, extract_request_timestamp, parse_json_object,
 };
 use crate::web::state::AppState;
 

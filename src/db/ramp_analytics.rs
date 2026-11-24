@@ -4,13 +4,13 @@
 //! plateau-anchor extraction to [`super::ramp_math`].
 
 use rusqlite::params;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
+use super::Database;
 use super::history::resolve_efficiency_window;
 use super::ramp_math::{
-    circulation_between_temps, extract_heating_ramp_rates, trace_heating_ramps, RampSample,
+    RampSample, circulation_between_temps, extract_heating_ramp_rates, trace_heating_ramps,
 };
-use super::Database;
 use crate::core::domain_constants::automation::automation_defaults::{
     HEATING_RAMP_HISTORY_LIMIT, HEATING_RAMP_TRIM_MIN_SAMPLES, MAX_DIAGNOSTIC_RAMPS,
 };

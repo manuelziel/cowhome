@@ -4,7 +4,7 @@
 //! `demand`/`setback`/`recovery`/`precision` sub-scores, and JSON payload assembly from
 //! SQLite query orchestration.
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use super::ramp_analytics::has_active_water_circulation;
 use crate::core::domain_constants::{
@@ -12,7 +12,7 @@ use crate::core::domain_constants::{
         BASE_SETBACK_SCORE, DEMAND_DELTA_THRESHOLD_C, DEMAND_INTENSITY_SPAN, FALLBACK_STEP_SECS,
         HEATING_RATE_SPAN, IDEAL_DEMAND_INTENSITY, IDEAL_HEATING_RATE, IDEAL_MAX_DROP_K,
         IDEAL_RECOVERY_MINUTES, IDEAL_SETBACK_DELTA_K, MAX_DROP_SPAN_K, MAX_SAVINGS_PERCENT,
-        MINUTES_PER_HOUR, MIN_DAYS_SPAN, MIN_RECOVERY_SUBSCORE, MIN_TEMP_DIFF_OUTDOOR_K,
+        MIN_DAYS_SPAN, MIN_RECOVERY_SUBSCORE, MIN_TEMP_DIFF_OUTDOOR_K, MINUTES_PER_HOUR,
         OVERSHOOT_DELTA_THRESHOLD_C, OVERSHOOT_PENALTY_PER_MIN, RECOVERY_DROP_WEIGHT,
         RECOVERY_MINUTES_SPAN, RECOVERY_RATE_WEIGHT, SECONDS_PER_DAY, SECONDS_PER_MINUTE,
         SETBACK_SCORE_SPAN, TREND_STABLE, VDI_SAVINGS_PER_KELVIN, WEIGHT_DEMAND, WEIGHT_PRECISION,

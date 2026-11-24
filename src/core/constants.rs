@@ -11,7 +11,7 @@ pub mod app_meta {
     /// Semantic version (`SemVer 2.0.0`) synchronized with `CHANGELOG.md`.
     pub const VERSION: &str = env!("CARGO_PKG_VERSION");
     /// Release date (`YYYY-MM-DD`) synchronized with `CHANGELOG.md`.
-    pub const LAST_MODIFIED: &str = "2026-11-19";
+    pub const LAST_MODIFIED: &str = "2026-11-24";
     /// Package author(s) from `Cargo.toml`.
     pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
     /// Short package summary displayed in CLI banners.

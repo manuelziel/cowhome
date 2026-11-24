@@ -3,8 +3,8 @@
 //! Keeps [`super::automation`] focused on public `Database` methods while encapsulating
 //! low-level `automation_config` upserts, batch ordering, and `AdaptiveStart` synchronization.
 
-use rusqlite::{params, Connection, OptionalExtension};
-use serde_json::{json, Map, Value};
+use rusqlite::{Connection, OptionalExtension, params};
+use serde_json::{Map, Value, json};
 
 use crate::core::domain_constants::automation::automation_identifiers::{
     ADAPTIVE_START, ALL_FEATURES, HEATING_SCHEDULE, HUMIDITY_CONTROL, HUMIDITY_LEGACY_KEYS,
@@ -220,10 +220,10 @@ fn prepare_config_for_upsert(
         .cloned()
         .unwrap_or_default();
     let mut eff_active = is_active.or_else(|| cfg.get("enabled").and_then(Value::as_bool));
-    if let Some(act) = eff_active {
-        if cfg.contains_key("enabled") {
-            cfg.insert(String::from("enabled"), json!(act));
-        }
+    if let Some(act) = eff_active
+        && cfg.contains_key("enabled")
+    {
+        cfg.insert(String::from("enabled"), json!(act));
     }
     if feature == HUMIDITY_CONTROL {
         for &k in HUMIDITY_LEGACY_KEYS {
@@ -233,10 +233,10 @@ fn prepare_config_for_upsert(
         let mut merged = fetch_scope_feature_cfg_on(conn, scope_type, scope_id, HEATING_SCHEDULE)?;
         merged.extend(cfg);
         promote_and_strip_preheat_keys(&mut merged);
-        if let Some(act) = eff_active {
-            if merged.contains_key("enabled") {
-                merged.insert(String::from("enabled"), json!(act));
-            }
+        if let Some(act) = eff_active
+            && merged.contains_key("enabled")
+        {
+            merged.insert(String::from("enabled"), json!(act));
         }
         cfg = merged;
     } else if feature == ADAPTIVE_START {
@@ -338,27 +338,27 @@ fn mirror_preheat_on(conn: &Connection, p: &UpsertParams<'_>) -> AppResult<Optio
             ADAPTIVE_START,
         )));
     }
-    if p.feature == ADAPTIVE_START {
-        if let Some(act) = p.is_active {
-            let mut s_cfg =
-                fetch_scope_feature_cfg_on(conn, p.scope_type, p.scope_id, HEATING_SCHEDULE)?;
-            s_cfg.insert(String::from("preheat_enabled"), json!(act));
-            promote_and_strip_preheat_keys(&mut s_cfg);
-            run_upsert_statement(
-                conn,
-                HEATING_SCHEDULE,
-                p.scope_type,
-                p.scope_id,
-                None,
-                Some(&s_cfg),
-                p.eff_ts,
-            )?;
-            return Ok(Some(build_automation_lww_key(
-                p.scope_type,
-                p.scope_id,
-                HEATING_SCHEDULE,
-            )));
-        }
+    if p.feature == ADAPTIVE_START
+        && let Some(act) = p.is_active
+    {
+        let mut s_cfg =
+            fetch_scope_feature_cfg_on(conn, p.scope_type, p.scope_id, HEATING_SCHEDULE)?;
+        s_cfg.insert(String::from("preheat_enabled"), json!(act));
+        promote_and_strip_preheat_keys(&mut s_cfg);
+        run_upsert_statement(
+            conn,
+            HEATING_SCHEDULE,
+            p.scope_type,
+            p.scope_id,
+            None,
+            Some(&s_cfg),
+            p.eff_ts,
+        )?;
+        return Ok(Some(build_automation_lww_key(
+            p.scope_type,
+            p.scope_id,
+            HEATING_SCHEDULE,
+        )));
     }
     Ok(None)
 }

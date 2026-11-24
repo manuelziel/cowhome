@@ -10,7 +10,7 @@ use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::Response;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use super::device_helpers::{
     build_action_lww_keys, filter_group_action_members, is_action_stale, parse_bool_param,
@@ -31,7 +31,7 @@ use crate::core::domain_constants::hardware::{
 };
 use crate::core::error::AppError;
 use crate::web::response::{
-    api_success, extract_request_timestamp, parse_json_object, ApiError, ApiResult,
+    ApiError, ApiResult, api_success, extract_request_timestamp, parse_json_object,
 };
 use crate::web::state::AppState;
 
@@ -87,15 +87,12 @@ pub async fn post_device_action(
         .into());
     };
 
-    if let Some(ref gid) = dev.group_id {
-        if GROUP_ESCALATED_ACTIONS.contains(&action.as_str()) {
-            if let Some(resp) =
-                try_software_group_action(&state, gid, &action, &params, eff_ts, is_explicit)
-                    .await?
-            {
-                return Ok(resp);
-            }
-        }
+    if let Some(ref gid) = dev.group_id
+        && GROUP_ESCALATED_ACTIONS.contains(&action.as_str())
+        && let Some(resp) =
+            try_software_group_action(&state, gid, &action, &params, eff_ts, is_explicit).await?
+    {
+        return Ok(resp);
     }
 
     execute_single_device_post(&state, &dev.ain, &action, &params, eff_ts, is_explicit).await
@@ -390,18 +387,17 @@ async fn execute_switch_action(
     trigger_engine: bool,
 ) -> ApiResult<()> {
     let dev = state.registry.get_device(ain);
-    if let Some(ref d) = dev {
-        if !d.capabilities.is_empty()
-            && !d
-                .capabilities
-                .iter()
-                .any(|c| c == device_capabilities::SWITCH)
-        {
-            return Err(AppError::Validation(format!(
-                "Device '{ain}' is a read-only power meter and cannot be switched"
-            ))
-            .into());
-        }
+    if let Some(ref d) = dev
+        && !d.capabilities.is_empty()
+        && !d
+            .capabilities
+            .iter()
+            .any(|c| c == device_capabilities::SWITCH)
+    {
+        return Err(AppError::Validation(format!(
+            "Device '{ain}' is a read-only power meter and cannot be switched"
+        ))
+        .into());
     }
     if action == device_actions::SET_SWITCH {
         let on = parse_bool_param(params, "state")?;

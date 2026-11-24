@@ -5,14 +5,14 @@
 
 use std::collections::{HashMap, HashSet};
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::core::domain_constants::{
     analytics::history_defaults::DEFAULT_LIMIT,
     hardware::{
         device_types,
         fritz_api::{
-            thermostat_error_description, DEFAULT_THERMOSTAT_OFFSET, SUBUNIT_DEFAULT_SUFFIX,
+            DEFAULT_THERMOSTAT_OFFSET, SUBUNIT_DEFAULT_SUFFIX, thermostat_error_description,
         },
         special_devices::{GROUP_ID_PREFIX, WEATHER_AIN},
     },
@@ -20,8 +20,8 @@ use crate::core::domain_constants::{
 use crate::core::heating_forecast::ForecastDayInput;
 use crate::core::psychrometrics::round_decimals;
 use crate::core::time_util::normalize_ain;
-use crate::db::history::HistoryQuery;
 use crate::db::Database;
+use crate::db::history::HistoryQuery;
 use crate::models::device::DeviceState;
 use crate::models::registry::StateRegistry;
 
@@ -364,15 +364,15 @@ fn extract_transitions(col_idx: &HashMap<&str, usize>, points: &[Value]) -> Vec<
             let Some(val) = row.get(idx).filter(|v| !v.is_null()) else {
                 continue;
             };
-            if let Some(prev) = prev_vals.get(key) {
-                if prev != val {
-                    transitions.push(json!({
-                        "timestamp": ts,
-                        "field": key,
-                        "from": prev,
-                        "to": val,
-                    }));
-                }
+            if let Some(prev) = prev_vals.get(key)
+                && prev != val
+            {
+                transitions.push(json!({
+                    "timestamp": ts,
+                    "field": key,
+                    "from": prev,
+                    "to": val,
+                }));
             }
             prev_vals.insert(key, val.clone());
         }

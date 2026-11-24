@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::DateTime;
 use chrono_tz::Tz;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::actuation::preheat_paused_reasons;
 use super::adaptive_start::AdaptiveStartRule;
@@ -18,8 +18,8 @@ use super::presence::PresenceProfilingRule;
 use super::schedule::HeatingScheduleRule;
 pub(super) use super::scope_binding::resolve_device_schedule_slot_id;
 use super::scopes::{
-    parse_feature_cfg, resolve_preheat_state, resolve_schedule_transition,
-    resolve_scheduled_base_temp, ScopeConfigMap,
+    ScopeConfigMap, parse_feature_cfg, resolve_preheat_state, resolve_schedule_transition,
+    resolve_scheduled_base_temp,
 };
 use crate::core::domain_constants::{
     automation::automation_identifiers::{

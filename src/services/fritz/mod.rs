@@ -11,8 +11,8 @@ pub mod tr064_actions;
 mod tr064_soap;
 pub mod tr064_telephony;
 
-pub use aha::{encode_hkr_tsoll, DeviceAttentionIssue, FritzAhaClient};
-pub use aha_xml::{parse_device_list_xml, ParsedDeviceList, RawAhaDevice};
+pub use aha::{DeviceAttentionIssue, FritzAhaClient, encode_hkr_tsoll};
+pub use aha_xml::{ParsedDeviceList, RawAhaDevice, parse_device_list_xml};
 pub use tr064::{ConnectionStatus, FritzTr064Client, RouterInfo};
 pub use tr064_actions::{GuestWlanStatus, HostEntry, WlanStatus};
 pub use tr064_telephony::{AnsweringMachineStatus, CallEntry};

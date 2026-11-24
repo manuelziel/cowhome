@@ -4,7 +4,7 @@
 //! sensors for radiator thermostats, applies dynamic target offset compensation with
 //! overheat protection, and enforces standalone static calibration (`temperature_offset`).
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::actuation::{OFFSET_HYSTERESIS_STEP, RULE_TEMP_EPSILON};
 use crate::core::domain_constants::{
@@ -106,10 +106,10 @@ impl ApparentTemperatureRule {
             let is_external = normalize_ain(&sensor_dev.ain) != normalize_ain(&thermostat.ain);
             if is_external && !sensor_dev.present {
                 registry.mutate_device(&thermostat.ain, |d| {
-                    if let Some(t) = d.as_thermostat_mut() {
-                        if let Some(hw) = t.temperature_hardware.filter(|&v| v > 0.0) {
-                            t.temperature_current = hw;
-                        }
+                    if let Some(t) = d.as_thermostat_mut()
+                        && let Some(hw) = t.temperature_hardware.filter(|&v| v > 0.0)
+                    {
+                        t.temperature_current = hw;
                     }
                 });
                 self.restore_uncompensated_target(&thermostat, registry, aha)

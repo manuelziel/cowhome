@@ -11,7 +11,7 @@ use chrono::{DateTime, TimeZone};
 use chrono_tz::Tz;
 use serde_json::Value;
 
-use super::actuation::{dispatch_thermostat_target, preheat_paused_reasons, RULE_TEMP_EPSILON};
+use super::actuation::{RULE_TEMP_EPSILON, dispatch_thermostat_target, preheat_paused_reasons};
 use super::adaptive_helpers::{
     build_adaptive_scope_trace, resolve_current_room_temp, resolve_target_devices,
     set_twin_preheat_state,
@@ -365,15 +365,14 @@ impl AdaptiveStartRule {
                 let should_revert = dev.as_thermostat().is_some_and(|t| {
                     !t.window_open && (t.temperature_target - target_temp).abs() < RULE_TEMP_EPSILON
                 });
-                if should_revert {
-                    if let Err(err) =
+                if should_revert
+                    && let Err(err) =
                         dispatch_thermostat_target(dev, abort_temp, registry, aha).await
-                    {
-                        self.logger.warning(&format!(
-                            "Pre-heat abort revert failed for {}: {err}",
-                            dev.name
-                        ));
-                    }
+                {
+                    self.logger.warning(&format!(
+                        "Pre-heat abort revert failed for {}: {err}",
+                        dev.name
+                    ));
                 }
             }
             return;

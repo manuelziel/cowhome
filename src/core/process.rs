@@ -206,10 +206,10 @@ fn wait_with_timeout(child: &mut Child, program: &str, timeout: Duration) -> App
 // =============================================================================
 /// Sends `SIGKILL` to `child` and reaps its exit status to prevent zombie processes.
 fn terminate_timed_out_child(child: &mut Child) {
-    if child.kill().is_ok() {
-        if let Err(_reap_err) = child.wait() {
-            // Child already exited concurrently before reap completed.
-        }
+    if child.kill().is_ok()
+        && let Err(_reap_err) = child.wait()
+    {
+        // Child already exited concurrently before reap completed.
     }
 }
 

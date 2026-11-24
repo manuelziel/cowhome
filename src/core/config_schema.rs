@@ -9,12 +9,12 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::core::config::{
-    resolve_config_path, ApiConfig, AppConfig, AutomationConfig, FritzboxConfig, RateLimitConfig,
-    ServerConfig, WeatherConfig,
+    ApiConfig, AppConfig, AutomationConfig, FritzboxConfig, RateLimitConfig, ServerConfig,
+    WeatherConfig, resolve_config_path,
 };
 use crate::core::error::{AppError, AppResult};
 use crate::core::logger::LogLevel;
-use crate::core::security::{probe_path_presence, read_file_nofollow, PathPresence};
+use crate::core::security::{PathPresence, probe_path_presence, read_file_nofollow};
 
 // =============================================================================
 /// Strict top-level TOML schema rejecting misspelled or unknown tables (`cowhome validate`).

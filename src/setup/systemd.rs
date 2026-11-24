@@ -24,8 +24,8 @@ use crate::core::error::{AppError, AppResult};
 use crate::core::logger::Logger;
 use crate::core::process::{run_command_captured, run_command_inherited};
 use crate::core::security::{atomic_write_file, ensure_not_symlink, is_root};
-use crate::setup::deps::find_system_binary;
 use crate::setup::SetupEvent;
+use crate::setup::deps::find_system_binary;
 
 // =============================================================================
 /// Live registration and activation state of `<name>.service`.
@@ -167,7 +167,7 @@ pub fn install_or_update_unit(
 }
 
 // =============================================================================
-/// Executes `systemctl <start|stop|restart> <name>.service` (elevating via `sudo` if needed).
+/// Executes `systemctl <start|stop|restart|reload> <name>.service` (elevating via `sudo` if needed).
 ///
 /// # Errors
 /// Returns [`AppError`] if the unit is not installed or `systemctl` fails.

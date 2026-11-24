@@ -17,16 +17,14 @@ pub fn extract_request_api_key<'a>(
     authorization_header: Option<&'a str>,
     x_api_key_header: Option<&'a str>,
 ) -> Option<&'a str> {
-    if let Some(auth) = authorization_header.map(str::trim) {
-        if let Some((scheme, token)) = auth.split_once(char::is_whitespace) {
-            if scheme.eq_ignore_ascii_case(AUTH_SCHEME_BEARER)
-                || scheme.eq_ignore_ascii_case(AUTH_SCHEME_APIKEY)
-            {
-                let trimmed_tok = token.trim();
-                if !trimmed_tok.is_empty() {
-                    return Some(trimmed_tok);
-                }
-            }
+    if let Some(auth) = authorization_header.map(str::trim)
+        && let Some((scheme, token)) = auth.split_once(char::is_whitespace)
+        && (scheme.eq_ignore_ascii_case(AUTH_SCHEME_BEARER)
+            || scheme.eq_ignore_ascii_case(AUTH_SCHEME_APIKEY))
+    {
+        let trimmed_tok = token.trim();
+        if !trimmed_tok.is_empty() {
+            return Some(trimmed_tok);
         }
     }
     x_api_key_header.map(str::trim).filter(|s| !s.is_empty())
@@ -81,15 +79,15 @@ pub fn resolve_client_ip(
     if !is_trusted_proxy(direct, trusted_proxies) {
         return direct;
     }
-    if let Some(xff) = x_forwarded_for {
-        if let Some(resolved) = walk_xff_right_to_left(xff, trusted_proxies) {
-            return resolved;
-        }
+    if let Some(xff) = x_forwarded_for
+        && let Some(resolved) = walk_xff_right_to_left(xff, trusted_proxies)
+    {
+        return resolved;
     }
-    if let Some(real_raw) = x_real_ip.map(str::trim) {
-        if let Ok(parsed) = real_raw.parse::<IpAddr>() {
-            return unwrap_ipv4_mapped(parsed);
-        }
+    if let Some(real_raw) = x_real_ip.map(str::trim)
+        && let Ok(parsed) = real_raw.parse::<IpAddr>()
+    {
+        return unwrap_ipv4_mapped(parsed);
     }
     direct
 }
@@ -122,10 +120,10 @@ pub fn is_trusted_proxy(ip: IpAddr, trusted_proxies: &[String]) -> bool {
         return true;
     }
     for entry in trusted_proxies {
-        if let Ok((net_ip, prefix)) = parse_ip_or_cidr(entry) {
-            if ip_in_cidr(normalized, unwrap_ipv4_mapped(net_ip), prefix) {
-                return true;
-            }
+        if let Ok((net_ip, prefix)) = parse_ip_or_cidr(entry)
+            && ip_in_cidr(normalized, unwrap_ipv4_mapped(net_ip), prefix)
+        {
+            return true;
         }
     }
     false

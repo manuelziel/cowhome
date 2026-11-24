@@ -13,8 +13,8 @@ use super::chain::filter_target_list;
 use super::humidity::HumidityEvalParams;
 use super::runner::RulesEngine;
 use super::scopes::{
-    parse_feature_cfg, resolve_preheat_state, resolve_schedule_transition,
-    resolve_scheduled_base_temp, ScopeConfigMap,
+    ScopeConfigMap, parse_feature_cfg, resolve_preheat_state, resolve_schedule_transition,
+    resolve_scheduled_base_temp,
 };
 use super::trace::RuleSet;
 use crate::core::domain_constants::automation::automation_identifiers::{

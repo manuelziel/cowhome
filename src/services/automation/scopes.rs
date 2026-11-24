@@ -5,13 +5,13 @@
 
 use std::collections::HashMap;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::actuation::RULE_TEMP_EPSILON;
 use super::apparent_temp::ApparentTemperatureRule;
 pub use super::scope_binding::{
-    bind_configs_to_targets, merge_global_fallbacks, parse_feature_cfg, resolve_preheat_state,
-    resolve_schedule_transition, resolve_scheduled_base_temp, ScopeConfigMap,
+    ScopeConfigMap, bind_configs_to_targets, merge_global_fallbacks, parse_feature_cfg,
+    resolve_preheat_state, resolve_schedule_transition, resolve_scheduled_base_temp,
 };
 use crate::core::domain_constants::{
     automation::{
@@ -25,7 +25,7 @@ use crate::core::domain_constants::{
     hardware::{device_capabilities, device_types},
 };
 use crate::core::logger::Logger;
-use crate::core::psychrometrics::{compute_device_psychrometrics, DevicePsychrometricsInput};
+use crate::core::psychrometrics::{DevicePsychrometricsInput, compute_device_psychrometrics};
 use crate::core::time_util::normalize_ain;
 use crate::db::Database;
 use crate::models::registry::StateRegistry;
@@ -143,10 +143,10 @@ pub fn partition_group_members(
                         .any(|c| c == device_capabilities::TEMPERATURE_SENSOR))
         });
         if is_climate_sensor {
-            if sensor_ain.is_empty() {
-                if let Some(d) = dev {
-                    sensor_ain = d.ain;
-                }
+            if sensor_ain.is_empty()
+                && let Some(d) = dev
+            {
+                sensor_ain = d.ain;
             }
         } else if dev.as_ref().is_none_or(|d| {
             matches!(

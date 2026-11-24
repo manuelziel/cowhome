@@ -1,10 +1,10 @@
 //! 4-state `HumidityControl` v2 FSM transitions (`IDLE`, `TRANSIENT_DEBOUNCE`,
 //! `THERMAL_SHIELDING`, `RECOVERY_CHECK`) and $\max(T_{\text{guard}}, T_{\text{preheat}})$ actuation.
 
-use super::actuation::{dispatch_thermostat_target, humidity_guard_states, RULE_TEMP_EPSILON};
+use super::actuation::{RULE_TEMP_EPSILON, dispatch_thermostat_target, humidity_guard_states};
 use super::humidity::HumidityControlRule;
 use super::humidity_helpers::{
-    compute_stepdown_target, enrich_scope_psychrometrics, is_window_or_draft_active, ScopeClimate,
+    ScopeClimate, compute_stepdown_target, enrich_scope_psychrometrics, is_window_or_draft_active,
 };
 use crate::core::domain_constants::{
     analytics::history_defaults::FLOAT_EPSILON,
@@ -16,8 +16,8 @@ use crate::core::domain_constants::{
     hardware::device_types,
 };
 use crate::core::psychrometrics::{
-    calculate_guard_temperature, calculate_projected_base_humidity, ClimateGradients,
-    GuardTempParams,
+    ClimateGradients, GuardTempParams, calculate_guard_temperature,
+    calculate_projected_base_humidity,
 };
 use crate::core::time_util::normalize_ain;
 use crate::models::automation::HumidityControlConfig;

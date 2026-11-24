@@ -31,10 +31,10 @@ pub fn prompt_line(label: &str, default_value: Option<&str>) -> AppResult<String
 
     let raw = read_stdin_line_or_cancel()?;
     let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        if let Some(def) = default_value {
-            return Ok(def.to_owned());
-        }
+    if trimmed.is_empty()
+        && let Some(def) = default_value
+    {
+        return Ok(def.to_owned());
     }
     Ok(trimmed.to_owned())
 }

@@ -7,14 +7,14 @@
 use std::collections::HashMap;
 
 use rusqlite::params;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use super::automation_sql::{
-    default_scope_feature_map, execute_feature_upsert_on, extract_active_flag, extract_feature_ts,
-    fetch_scope_feature_cfg_on, harmonize_scope_preheat, load_scope_configs_on,
-    order_batch_features, parse_automation_row, UpsertParams,
-};
 use super::Database;
+use super::automation_sql::{
+    UpsertParams, default_scope_feature_map, execute_feature_upsert_on, extract_active_flag,
+    extract_feature_ts, fetch_scope_feature_cfg_on, harmonize_scope_preheat, load_scope_configs_on,
+    order_batch_features, parse_automation_row,
+};
 use crate::core::domain_constants::{
     automation::{
         automation_defaults::{SCHEDULE_DEFAULT_COMFORT_TEMP, SCHEDULE_DEFAULT_ECO_TEMP},
@@ -28,7 +28,7 @@ use crate::core::domain_constants::{
 use crate::core::error::{AppError, AppResult};
 use crate::core::heating_forecast::RuleSnapshot;
 use crate::core::time_util::{build_automation_lww_key, normalize_ain, now_epoch_f64};
-use crate::models::automation::{normalize_feature_name, AutomationScope};
+use crate::models::automation::{AutomationScope, normalize_feature_name};
 use crate::models::group::{format_group_id, parse_group_id};
 
 /// Tolerance when comparing existing slot temperatures against the previous `comfort_temp`.
@@ -53,14 +53,14 @@ impl Database {
         scope_id: &str,
     ) -> AppResult<(String, String)> {
         let parsed = AutomationScope::parse(Some(scope_type), Some(scope_id))?;
-        if parsed.scope_type == SCOPE_DEVICE {
-            if let Some((gid, gname)) = self.get_group_for_device(&parsed.scope_id)? {
-                return Err(AppError::Conflict(format!(
-                    "Device '{}' is managed by group '{gname}' ({}). Individual device automations are locked.",
-                    parsed.scope_id,
-                    format_group_id(gid)
-                )));
-            }
+        if parsed.scope_type == SCOPE_DEVICE
+            && let Some((gid, gname)) = self.get_group_for_device(&parsed.scope_id)?
+        {
+            return Err(AppError::Conflict(format!(
+                "Device '{}' is managed by group '{gname}' ({}). Individual device automations are locked.",
+                parsed.scope_id,
+                format_group_id(gid)
+            )));
         }
         Ok((parsed.scope_type, parsed.scope_id))
     }

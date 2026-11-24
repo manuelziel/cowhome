@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, TimeZone};
 use chrono_tz::Tz;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::core::domain_constants::{
     automation::automation_defaults::{PREHEAT_MAX_MINUTES, PREHEAT_MIN_DELTA_C},

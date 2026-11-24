@@ -7,8 +7,8 @@
 use std::collections::HashMap;
 
 use chrono::Local;
-use rusqlite::{params, OptionalExtension};
-use serde_json::{json, Map, Value};
+use rusqlite::{OptionalExtension, params};
+use serde_json::{Map, Value, json};
 
 use crate::core::config::AppConfig;
 use crate::core::constants::app_meta::{SOFTWARE_NAME, VERSION};
@@ -359,15 +359,15 @@ fn import_system_settings(db: &Database, raw_settings: &Value, overwrite: bool) 
     let map = raw_settings.as_object().ok_or_else(|| {
         AppError::Validation("Invalid 'system_settings' section (expected mapping)".into())
     })?;
-    if let Some(price_val) = first_present_value(map, PRICE_KEYS) {
-        if overwrite || !setting_row_exists(db, SETTING_KEY_PRICE)? {
-            db.set_electricity_price(price_val, None)?;
-        }
+    if let Some(price_val) = first_present_value(map, PRICE_KEYS)
+        && (overwrite || !setting_row_exists(db, SETTING_KEY_PRICE)?)
+    {
+        db.set_electricity_price(price_val, None)?;
     }
-    if let Some(fee_val) = first_present_value(map, BASE_FEE_KEYS) {
-        if overwrite || !setting_row_exists(db, SETTING_KEY_BASE_FEE)? {
-            db.set_electricity_base_fee(fee_val, None)?;
-        }
+    if let Some(fee_val) = first_present_value(map, BASE_FEE_KEYS)
+        && (overwrite || !setting_row_exists(db, SETTING_KEY_BASE_FEE)?)
+    {
+        db.set_electricity_base_fee(fee_val, None)?;
     }
     Ok(())
 }

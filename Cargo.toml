@@ -1,8 +1,8 @@
 [package]
 name = "cowhome"
-version = "0.0.1"
-edition = "2021"
-rust-version = "1.85"
+version = "0.0.2"
+edition = "2024"
+rust-version = "1.100"
 authors = ["Manuel Ziel"]
 description = "Autonomous single-binary Smart Home Hub for the FritzBox ecosystem (AHA & TR-064)"
 license = "MIT"

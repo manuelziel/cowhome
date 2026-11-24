@@ -6,11 +6,11 @@
 
 use std::collections::HashMap;
 
-use rusqlite::{params, Connection};
-use serde_json::{json, Map, Value};
+use rusqlite::{Connection, params};
+use serde_json::{Map, Value, json};
 
-use super::efficiency::AnalyticsContext;
 use super::Database;
+use super::efficiency::AnalyticsContext;
 use crate::core::domain_constants::{
     analytics::{
         efficiency_defaults::SECONDS_PER_DAY,

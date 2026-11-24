@@ -14,8 +14,8 @@ use crate::cli::input::{prompt_confirm, prompt_line};
 use crate::cli::output::ConsolePrinter;
 use crate::cli::yaml_codec::{emit_yaml_document, parse_yaml_document};
 use crate::core::config::{
-    format_config_toml, load_runtime_config, parse_strict_config_toml, resolve_config_path,
-    save_config, AppConfig,
+    AppConfig, format_config_toml, load_runtime_config, parse_strict_config_toml,
+    resolve_config_path, save_config,
 };
 use crate::core::constants::{
     app_meta::SOFTWARE_NAME,
@@ -281,10 +281,10 @@ pub fn run_interactive_import(
 /// # Errors
 /// Returns [`AppError::Io`] on unrecoverable terminal stream errors.
 fn detect_interactive_export_format(dest: &Path) -> AppResult<ConfigFormat> {
-    if let Some(ext) = dest.extension().and_then(|s| s.to_str()) {
-        if let Ok(parsed) = ConfigFormat::parse_flag(ext) {
-            return Ok(parsed);
-        }
+    if let Some(ext) = dest.extension().and_then(|s| s.to_str())
+        && let Ok(parsed) = ConfigFormat::parse_flag(ext)
+    {
+        return Ok(parsed);
     }
     let raw = match prompt_line("Format (yaml/json/toml)", Some("yaml")) {
         Ok(v) => v,

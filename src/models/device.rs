@@ -4,11 +4,11 @@
 //! compile-time type safety and excluding transient worker hold flags from JSON output.
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::core::domain_constants::hardware::{
     device_capabilities, device_types,
-    fritz_api::{thermostat_error_description, DEFAULT_BATTERY_LEVEL, DEFAULT_THERMOSTAT_OFFSET},
+    fritz_api::{DEFAULT_BATTERY_LEVEL, DEFAULT_THERMOSTAT_OFFSET, thermostat_error_description},
     special_devices::{ROUTER_AIN, ROUTER_NAME},
 };
 use crate::core::psychrometrics::DevicePsychrometrics;

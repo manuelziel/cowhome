@@ -22,9 +22,10 @@ use crate::core::logger::Logger;
 use crate::core::security::{
     apply_ownership_if_root, atomic_write_file, ensure_not_symlink, ensure_root_privileges,
 };
+use crate::setup::SetupEvent;
 use crate::setup::deps::ensure_dependencies_installed;
 pub use crate::setup::status::{
-    get_installed_version, inspect_setup_status, is_installed, SetupStatusReport,
+    SetupStatusReport, get_installed_version, inspect_setup_status, is_installed,
 };
 use crate::setup::systemd::{
     install_or_update_unit, restart_unit_after_update, stop_disable_and_remove_unit,
@@ -33,7 +34,6 @@ use crate::setup::systemd::{
 use crate::setup::users::{
     ensure_service_account, provision_fhs_directories, remove_service_account_on_purge,
 };
-use crate::setup::SetupEvent;
 
 // =============================================================================
 /// Performs a full system installation (`cowhome setup install`).

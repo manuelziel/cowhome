@@ -5,6 +5,15 @@ All notable changes to **CowHome** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2026-11-24
+
+### Added
+- Post-save `systemctl reload` (`SIGHUP`) / `systemctl restart` prompt and `[y/N]`-guarded `Reset to Defaults` in `src/cli/config_menu.rs`.
+
+### Changed
+- Upgraded crate to Rust Edition `2024` (`rust-version = "1.100"`) and synchronized `--range` CLI help & `openapi.yaml` `requested_range` enum across all 8 canonical windows (`24h`..`all`).
+- Standardized `Runtime` (`7` items without `Setup / Maintenance`), `Setup` (`1`-word labels), and `Configure` TUIs (`runtime_menu.rs`, `setup_menu.rs`, `config_menu.rs`, `config_sections.rs`) with dynamic `Save Changes` and context-sensitive `0) Back` vs. `0) Exit`.
+
 ## [0.0.1] - 2026-11-19
 
 ### Added

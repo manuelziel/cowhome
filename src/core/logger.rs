@@ -127,10 +127,10 @@ pub fn should_use_colors(config_colors_enabled: bool, stream_is_tty: bool) -> bo
     if std::env::var_os("NO_COLOR").is_some() {
         return false;
     }
-    if let Ok(term) = std::env::var("TERM") {
-        if term.eq_ignore_ascii_case("dumb") {
-            return false;
-        }
+    if let Ok(term) = std::env::var("TERM")
+        && term.eq_ignore_ascii_case("dumb")
+    {
+        return false;
     }
     true
 }
@@ -304,10 +304,10 @@ fn send_journald_datagram(level: LogLevel, message: &str) {
     );
     append_journal_field(&mut payload, "MESSAGE", message);
 
-    if let Ok(sock) = UnixDatagram::unbound() {
-        if let Err(_send_err) = sock.send_to(&payload, socket_path) {
-            // Non-fatal in minimal containers where journald socket is unreachable;
-            // the record is already stored in the in-memory diagnostics ring buffer.
-        }
+    if let Ok(sock) = UnixDatagram::unbound()
+        && let Err(_send_err) = sock.send_to(&payload, socket_path)
+    {
+        // Non-fatal in minimal containers where journald socket is unreachable;
+        // the record is already stored in the in-memory diagnostics ring buffer.
     }
 }

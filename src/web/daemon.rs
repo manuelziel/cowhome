@@ -10,13 +10,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::net::TcpListener;
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
 use super::router::build_router;
 use super::state::AppState;
-use crate::core::config::{load_runtime_config, AppConfig};
+use crate::core::config::{AppConfig, load_runtime_config};
 use crate::core::constants::{
     app_meta::{SOFTWARE_NAME, VERSION},
     cli_style::{EXIT_SIGINT, EXIT_SUCCESS},

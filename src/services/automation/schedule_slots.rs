@@ -91,10 +91,11 @@ pub(super) fn parse_day_blocks(
     let mut parsed = Vec::new();
     let src_prev = prev_day_blocks.unwrap_or(raw_blocks);
     for prev_item in src_prev {
-        if let Some((s, e, t)) = extract_block_span(prev_item, default_comfort) {
-            if s > e && e > 0 {
-                parsed.push((0, e, t));
-            }
+        if let Some((s, e, t)) = extract_block_span(prev_item, default_comfort)
+            && s > e
+            && e > 0
+        {
+            parsed.push((0, e, t));
         }
     }
     for item in raw_blocks {
@@ -110,11 +111,12 @@ pub(super) fn parse_day_blocks(
     parsed.sort_by_key(|&(s, _, _)| s);
     let mut merged: Vec<(u16, u16, f64)> = Vec::with_capacity(parsed.len());
     for (s, e, t) in parsed {
-        if let Some(last) = merged.last_mut() {
-            if last.1 >= s && (last.2 - t).abs() < RULE_TEMP_EPSILON {
-                last.1 = last.1.max(e);
-                continue;
-            }
+        if let Some(last) = merged.last_mut()
+            && last.1 >= s
+            && (last.2 - t).abs() < RULE_TEMP_EPSILON
+        {
+            last.1 = last.1.max(e);
+            continue;
         }
         merged.push((s, e, t));
     }

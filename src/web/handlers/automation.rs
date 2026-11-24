@@ -11,15 +11,15 @@ use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::response::Response;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::core::domain_constants::automation::automation_identifiers::{
     ADAPTIVE_START, HEATING_SCHEDULE, KEY_COMFORT_TEMP, KEY_ECO_TEMP, SCOPE_GLOBAL,
 };
 use crate::core::error::AppError;
-use crate::models::automation::{normalize_feature_name, AutomationScope};
+use crate::models::automation::{AutomationScope, normalize_feature_name};
 use crate::web::response::{
-    api_success, extract_request_timestamp, parse_json_object, ApiError, ApiResult,
+    ApiError, ApiResult, api_success, extract_request_timestamp, parse_json_object,
 };
 use crate::web::state::AppState;
 
@@ -299,10 +299,10 @@ fn parse_single_feature_update(
             .collect();
         config_opt = Some(Value::Object(sub));
     }
-    if is_active.is_none() {
-        if let Some(cfg_obj) = config_opt.as_ref().and_then(Value::as_object) {
-            is_active = extract_bool(cfg_obj);
-        }
+    if is_active.is_none()
+        && let Some(cfg_obj) = config_opt.as_ref().and_then(Value::as_object)
+    {
+        is_active = extract_bool(cfg_obj);
     }
     if is_active.is_none() && config_opt.is_none() {
         return Err(AppError::Validation(

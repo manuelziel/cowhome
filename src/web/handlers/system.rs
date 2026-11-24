@@ -10,12 +10,12 @@ use axum::body::Bytes;
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::response::Response;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::core::constants::diagnostics_defaults::{
     DEFAULT_LOG_LIMIT, DEFAULT_RANGE, MAX_LOG_LIMIT,
 };
-use crate::core::diagnostics::{validate_diagnostics_range, DiagnosticsQuery};
+use crate::core::diagnostics::{DiagnosticsQuery, validate_diagnostics_range};
 use crate::core::domain_constants::{
     analytics::energy_defaults::{
         BASE_FEE_PAYLOAD_KEYS, CURRENCY, PRICE_PAYLOAD_KEYS, SETTING_KEY_BASE_FEE,
@@ -26,7 +26,7 @@ use crate::core::domain_constants::{
 use crate::core::error::AppError;
 use crate::services::diagnostics::DiagnosticsService;
 use crate::web::response::{
-    api_success, extract_request_timestamp, parse_json_object, ApiError, ApiResult,
+    ApiError, ApiResult, api_success, extract_request_timestamp, parse_json_object,
 };
 use crate::web::state::AppState;
 
@@ -60,10 +60,9 @@ pub async fn get_system_status(State(state): State<Arc<AppState>>) -> ApiResult<
             .get("is_connected")
             .and_then(Value::as_bool)
             .unwrap_or(false)
+        && let Some(obj) = conn.as_object_mut()
     {
-        if let Some(obj) = conn.as_object_mut() {
-            obj.insert(String::from("is_connected"), json!(true));
-        }
+        obj.insert(String::from("is_connected"), json!(true));
     }
     let mut wan_ip = conn
         .get("external_ip")
@@ -73,10 +72,10 @@ pub async fn get_system_status(State(state): State<Arc<AppState>>) -> ApiResult<
     if wan_ip.is_none() {
         wan_ip = state.tr064.get_external_ip().await;
     }
-    if let (Some(ref ip), Some(obj)) = (&wan_ip, conn.as_object_mut()) {
-        if obj.get("external_ip").is_none_or(Value::is_null) {
-            obj.insert(String::from("external_ip"), json!(ip));
-        }
+    if let (Some(ip), Some(obj)) = (&wan_ip, conn.as_object_mut())
+        && obj.get("external_ip").is_none_or(Value::is_null)
+    {
+        obj.insert(String::from("external_ip"), json!(ip));
     }
 
     let wlan_main = state

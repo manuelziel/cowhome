@@ -178,10 +178,10 @@ impl Database {
             tx.commit()?;
             Ok(out)
         })();
-        if result.is_err() {
-            if let Ok(mut cache) = self.inner.entity_cache.write() {
-                cache.clear();
-            }
+        if result.is_err()
+            && let Ok(mut cache) = self.inner.entity_cache.write()
+        {
+            cache.clear();
         }
         self.return_connection(conn);
         result
@@ -273,11 +273,11 @@ impl Database {
 
     /// Returns a checked-out connection back to `pool` unless closed.
     fn return_connection(&self, conn: Connection) {
-        if let Ok(mut guard) = self.inner.pool.lock() {
-            if !guard.closed {
-                guard.idle.push(conn);
-                self.inner.pool_cv.notify_one();
-            }
+        if let Ok(mut guard) = self.inner.pool.lock()
+            && !guard.closed
+        {
+            guard.idle.push(conn);
+            self.inner.pool_cv.notify_one();
         }
     }
 }

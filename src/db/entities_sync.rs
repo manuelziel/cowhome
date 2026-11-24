@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 
 use super::Database;
 use crate::core::domain_constants::{
@@ -169,10 +169,8 @@ impl Database {
             )?;
             Ok((c1 + c2 + c3) > 0)
         })?;
-        if changed {
-            if let Ok(mut cache) = self.inner.entity_cache.write() {
-                cache.clear();
-            }
+        if changed && let Ok(mut cache) = self.inner.entity_cache.write() {
+            cache.clear();
         }
         self.record_lww_mutation(&[lww_key], eff_ts);
         Ok(true)
@@ -281,15 +279,13 @@ impl Database {
                 }
                 return Ok(());
             }
-            if let Ok(mut caches) = self.inner.recorder_caches.lock() {
-                if let Some((sup_flag, sup_ts)) = caches.presence_suppressed.remove(&norm_mac) {
-                    if changed
-                        && (sup_ts as i64) > (prev_ts as i64)
-                        && (eff_now as i64) > (sup_ts as i64)
-                    {
-                        pre_edge = Some((sup_flag, sup_ts));
-                    }
-                }
+            if let Ok(mut caches) = self.inner.recorder_caches.lock()
+                && let Some((sup_flag, sup_ts)) = caches.presence_suppressed.remove(&norm_mac)
+                && changed
+                && (sup_ts as i64) > (prev_ts as i64)
+                && (eff_now as i64) > (sup_ts as i64)
+            {
+                pre_edge = Some((sup_flag, sup_ts));
             }
         }
         if let Some((sup_flag, sup_ts)) = pre_edge {
@@ -337,10 +333,10 @@ impl Database {
         conn: &Connection,
         norm_mac: &str,
     ) -> AppResult<Option<(bool, f64)>> {
-        if let Ok(caches) = self.inner.recorder_caches.lock() {
-            if let Some(&entry) = caches.presence_saved.get(norm_mac) {
-                return Ok(Some(entry));
-            }
+        if let Ok(caches) = self.inner.recorder_caches.lock()
+            && let Some(&entry) = caches.presence_saved.get(norm_mac)
+        {
+            return Ok(Some(entry));
         }
         let row: Option<(i64, Option<f64>)> = conn
             .query_row(
@@ -381,20 +377,20 @@ fn insert_presence_row_on(conn: &Connection, mac: &str, is_home: bool, ts: f64) 
 pub(super) fn resolve_entity_on(conn: &Connection, ain: &str) -> AppResult<EntityRow> {
     let mut row = query_single_entity(conn, ain)?;
     let stripped = strip_subunit_suffix(ain);
-    if row.is_none() {
-        if let Some(ref base_ain) = stripped {
-            row = query_single_entity(conn, base_ain)?;
-        }
+    if row.is_none()
+        && let Some(ref base_ain) = stripped
+    {
+        row = query_single_entity(conn, base_ain)?;
     }
     let is_generic = row
         .as_ref()
         .is_some_and(|r| r.device_type == device_types::GENERIC);
     if (row.is_none() || is_generic) && stripped.is_none() {
         let sub_ain = format!("{}{SUBUNIT_DEFAULT_SUFFIX}", ain.trim());
-        if let Some(sub_row) = query_single_entity(conn, &sub_ain)? {
-            if row.is_none() || sub_row.device_type != device_types::GENERIC {
-                row = Some(sub_row);
-            }
+        if let Some(sub_row) = query_single_entity(conn, &sub_ain)?
+            && (row.is_none() || sub_row.device_type != device_types::GENERIC)
+        {
+            row = Some(sub_row);
         }
     }
     row.ok_or_else(|| AppError::NotFound(format!("Device with AIN '{ain}' not found")))

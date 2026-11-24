@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use chrono::DateTime;
 use chrono_tz::Tz;
 use serde::de::DeserializeOwned;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use super::schedule::HeatingScheduleRule;
 use crate::core::domain_constants::{
@@ -21,7 +21,7 @@ use crate::core::domain_constants::{
 };
 use crate::core::time_util::normalize_ain;
 use crate::db::Database;
-use crate::models::automation::{normalize_config_payload, HeatingScheduleConfig};
+use crate::models::automation::{HeatingScheduleConfig, normalize_config_payload};
 use crate::models::registry::StateRegistry;
 
 /// Feature configuration map (`feature_name -> {"is_active": bool, "config": {...}}`).
@@ -271,21 +271,23 @@ pub(super) async fn resolve_device_schedule_slot_id(
                 }
             }
             let is_on = |v: &Value| v.get("is_active").and_then(Value::as_bool).unwrap_or(false);
-            if !in_group && !is_on(&sched_val) {
-                if let Ok(dev_map) = d.get_all_automation_configs(SCOPE_DEVICE, &ain_owned) {
-                    sched_val = dev_map
-                        .get(HEATING_SCHEDULE)
-                        .cloned()
-                        .unwrap_or(Value::Null);
-                }
+            if !in_group
+                && !is_on(&sched_val)
+                && let Ok(dev_map) = d.get_all_automation_configs(SCOPE_DEVICE, &ain_owned)
+            {
+                sched_val = dev_map
+                    .get(HEATING_SCHEDULE)
+                    .cloned()
+                    .unwrap_or(Value::Null);
             }
-            if !is_switch && !is_on(&sched_val) {
-                if let Ok(glob_map) = d.get_all_automation_configs(SCOPE_GLOBAL, SCOPE_GLOBAL) {
-                    sched_val = glob_map
-                        .get(HEATING_SCHEDULE)
-                        .cloned()
-                        .unwrap_or(Value::Null);
-                }
+            if !is_switch
+                && !is_on(&sched_val)
+                && let Ok(glob_map) = d.get_all_automation_configs(SCOPE_GLOBAL, SCOPE_GLOBAL)
+            {
+                sched_val = glob_map
+                    .get(HEATING_SCHEDULE)
+                    .cloned()
+                    .unwrap_or(Value::Null);
             }
             if !is_on(&sched_val) {
                 return Ok(None);

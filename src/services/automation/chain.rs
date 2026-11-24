@@ -12,11 +12,11 @@ use serde_json::Value;
 
 use super::runner::RulesEngine;
 use super::scopes::{
-    bind_configs_to_targets, ensure_group_sensor_binding, merge_global_fallbacks,
+    ScopeConfigMap, bind_configs_to_targets, ensure_group_sensor_binding, merge_global_fallbacks,
     parse_feature_cfg, partition_group_members, resolve_scheduled_base_temp,
-    sync_scope_thermostat_presets, ScopeConfigMap,
+    sync_scope_thermostat_presets,
 };
-use super::trace::{build_scope_trace_entry, sync_scope_preheat_paused_reasons, RuleSet};
+use super::trace::{RuleSet, build_scope_trace_entry, sync_scope_preheat_paused_reasons};
 use crate::core::domain_constants::{
     automation::automation_identifiers::{
         APPARENT_TEMPERATURE, HEATING_SCHEDULE, PRESENCE_PROFILING, SCOPE_DEVICE, SCOPE_GROUP,

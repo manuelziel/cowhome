@@ -5,8 +5,8 @@
 //! HTTP Digest authentication for TR-064 SOAP endpoints on port `49000`.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use md5::{Digest as _, Md5};
 use pbkdf2::pbkdf2_hmac;

@@ -259,15 +259,15 @@ pub fn apply_caller_ownership_if_sudo(path: &Path) -> AppResult<()> {
         return Ok(());
     }
     ensure_not_symlink(path)?;
-    if let Ok(caller) = resolve_caller_identity() {
-        if caller.uid != 0 {
-            std::os::unix::fs::chown(path, Some(caller.uid), Some(caller.gid)).map_err(|err| {
-                AppError::io(
-                    format!("Failed handing ownership on '{}'", path.display()),
-                    err,
-                )
-            })?;
-        }
+    if let Ok(caller) = resolve_caller_identity()
+        && caller.uid != 0
+    {
+        std::os::unix::fs::chown(path, Some(caller.uid), Some(caller.gid)).map_err(|err| {
+            AppError::io(
+                format!("Failed handing ownership on '{}'", path.display()),
+                err,
+            )
+        })?;
     }
     Ok(())
 }
@@ -355,10 +355,10 @@ pub fn atomic_write_file(path: &Path, contents: &[u8], mode: u32) -> AppResult<(
         Ok(())
     });
 
-    if result.is_err() {
-        if let Err(_cleanup_err) = fs::remove_file(&tmp_path) {
-            // Orphan cleanup is best-effort if `open` failed before creation.
-        }
+    if result.is_err()
+        && let Err(_cleanup_err) = fs::remove_file(&tmp_path)
+    {
+        // Orphan cleanup is best-effort if `open` failed before creation.
     }
     result
 }
@@ -453,9 +453,9 @@ fn write_and_sync_temp_file(tmp_path: &Path, contents: &[u8], mode: u32) -> AppR
 // =============================================================================
 /// Flushes parent directory metadata after atomic rename so updates survive power loss.
 fn sync_directory_best_effort(parent: &Path) {
-    if let Ok(dir_handle) = File::open(parent) {
-        if let Err(_sync_err) = dir_handle.sync_all() {
-            // Virtual filesystems such as `tmpfs` may return `EINVAL` on directory `fsync`.
-        }
+    if let Ok(dir_handle) = File::open(parent)
+        && let Err(_sync_err) = dir_handle.sync_all()
+    {
+        // Virtual filesystems such as `tmpfs` may return `EINVAL` on directory `fsync`.
     }
 }

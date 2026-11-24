@@ -9,9 +9,9 @@ use std::collections::{HashMap, HashSet};
 use rusqlite::params;
 use serde_json::{Map, Value};
 
+use super::Database;
 use super::entities_sync::deduplicate_ains_by_norm;
 use super::settings::NumericSettingSpec;
-use super::Database;
 use crate::core::domain_constants::{
     analytics::{
         efficiency_defaults::SECONDS_PER_DAY,
@@ -29,7 +29,7 @@ use crate::core::domain_constants::{
     },
 };
 use crate::core::energy_analytics::{
-    aggregate_energy_summaries, build_device_energy_summary, EnergySample, EnergySummary,
+    EnergySample, EnergySummary, aggregate_energy_summaries, build_device_energy_summary,
 };
 use crate::core::error::AppResult;
 use crate::core::time_util::{normalize_ain, now_epoch_f64};
@@ -155,15 +155,15 @@ impl Database {
             .collect();
 
         let norm = normalize_ain(&entity.ain);
-        if let Some(live) = live_switches.and_then(|m| m.get(&norm)) {
-            if samples.last().is_none_or(|last| eff_now >= last.timestamp) {
-                samples.push(EnergySample {
-                    timestamp: eff_now,
-                    present: live.present,
-                    power_current_w: Some(live.power_current),
-                    energy_total_wh: Some(live.energy_total),
-                });
-            }
+        if let Some(live) = live_switches.and_then(|m| m.get(&norm))
+            && samples.last().is_none_or(|last| eff_now >= last.timestamp)
+        {
+            samples.push(EnergySample {
+                timestamp: eff_now,
+                present: live.present,
+                power_current_w: Some(live.power_current),
+                energy_total_wh: Some(live.energy_total),
+            });
         }
         let eff_tz = self.resolve_home_tz_name(tz_name);
         Some(build_device_energy_summary(
@@ -234,16 +234,16 @@ impl Database {
             .filter(|a| self.is_grid_meter_device(a, live_switches))
             .cloned()
             .collect();
-        if !grid_meters.is_empty() {
-            if let Some(grid_res) = self.aggregate_energy_for_ains(
+        if !grid_meters.is_empty()
+            && let Some(grid_res) = self.aggregate_energy_for_ains(
                 &grid_meters,
                 IDENTIFIER_HOUSE,
                 tz_name,
                 now_ts,
                 live_switches,
-            ) {
-                return Some(grid_res);
-            }
+            )
+        {
+            return Some(grid_res);
         }
         self.aggregate_energy_for_ains(&filtered, IDENTIFIER_HOUSE, tz_name, now_ts, live_switches)
     }

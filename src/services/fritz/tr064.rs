@@ -12,10 +12,10 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex as AsyncMutex;
 
-use super::auth::{build_aha_base_url, build_tr064_base_url, DigestAuthenticator};
+use super::auth::{DigestAuthenticator, build_aha_base_url, build_tr064_base_url};
 use super::tr064_soap::{
-    build_soap_envelope, clean_meta_value, decode_soap_response, default_avm_service_map,
-    is_valid_public_ip, merge_scpd_xml, parse_u64_field, ScpdCatalog, Tr064ServiceDesc,
+    ScpdCatalog, Tr064ServiceDesc, build_soap_envelope, clean_meta_value, decode_soap_response,
+    default_avm_service_map, is_valid_public_ip, merge_scpd_xml, parse_u64_field,
 };
 use crate::core::constants::service_defaults::DEFAULT_FRITZBOX_TIMEOUT_SECS;
 use crate::core::domain_constants::hardware::{
@@ -137,10 +137,10 @@ impl FritzTr064Client {
 
     /// Stores a fallback firmware version extracted from AHA `getdevicelistinfos` XML.
     pub fn set_fallback_firmware(&self, version: Option<&str>) {
-        if let Some(cleaned) = clean_meta_value(version) {
-            if let Ok(mut guard) = self.fallback_fw_version.write() {
-                *guard = Some(cleaned);
-            }
+        if let Some(cleaned) = clean_meta_value(version)
+            && let Ok(mut guard) = self.fallback_fw_version.write()
+        {
+            *guard = Some(cleaned);
         }
     }
 
@@ -160,13 +160,12 @@ impl FritzTr064Client {
         let mut any_ok = false;
         for path in SCPD_DISCOVERY_PATHS {
             let url = format!("{}{path}", cfg.tr064_base);
-            if let Ok(resp) = self.http.get(&url).send().await {
-                if resp.status().is_success() {
-                    if let Ok(xml) = resp.text().await {
-                        merge_scpd_xml(&xml, &mut cat);
-                        any_ok = true;
-                    }
-                }
+            if let Ok(resp) = self.http.get(&url).send().await
+                && resp.status().is_success()
+                && let Ok(xml) = resp.text().await
+            {
+                merge_scpd_xml(&xml, &mut cat);
+                any_ok = true;
             }
         }
         if !any_ok {
@@ -227,26 +226,23 @@ impl FritzTr064Client {
             "WANPPPConnection:1",
             "WANPPPConn:1",
         ] {
-            if let Ok(map) = self.call_action(svc, "GetExternalIPAddress", &[]).await {
-                if let Some(ip) = map
+            if let Ok(map) = self.call_action(svc, "GetExternalIPAddress", &[]).await
+                && let Some(ip) = map
                     .get("NewExternalIPAddress")
                     .filter(|s| is_valid_public_ip(s))
-                {
-                    return Some(ip.trim().to_owned());
-                }
+            {
+                return Some(ip.trim().to_owned());
             }
         }
         for &svc in &["WANIPConn:1", "WANIPConnection:1", "WANPPPConnection:1"] {
             if let Ok(map) = self
                 .call_action(svc, "X_AVM-DE_GetExternalIPv6Address", &[])
                 .await
-            {
-                if let Some(ip6) = map
+                && let Some(ip6) = map
                     .get("NewExternalIPv6Address")
                     .filter(|s| is_valid_public_ip(s))
-                {
-                    return Some(ip6.trim().to_owned());
-                }
+            {
+                return Some(ip6.trim().to_owned());
             }
         }
         None
@@ -447,10 +443,10 @@ impl FritzTr064Client {
     /// Queries physical WAN link status (`Up` / `Down`) via `WANCommonIFC1` / `WANCommonInterfaceConfig:1`.
     async fn query_physical_link_up(&self) -> Option<bool> {
         for &svc in &["WANCommonIFC:1", "WANCommonInterfaceConfig:1"] {
-            if let Ok(info) = self.call_action(svc, "GetCommonLinkProperties", &[]).await {
-                if let Some(st) = info.get("NewPhysicalLinkStatus") {
-                    return Some(st.trim().eq_ignore_ascii_case("up"));
-                }
+            if let Ok(info) = self.call_action(svc, "GetCommonLinkProperties", &[]).await
+                && let Some(st) = info.get("NewPhysicalLinkStatus")
+            {
+                return Some(st.trim().eq_ignore_ascii_case("up"));
             }
         }
         None

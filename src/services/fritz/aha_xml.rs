@@ -265,12 +265,11 @@ fn populate_climate_fields(node: Node<'_, '_>, dev: &mut RawAhaDevice) {
             dev.temperature_offset = Some(f64::from(raw_off) / fritz_api::DECICELSIUS_FACTOR);
         }
     }
-    if let Some(hum_node) = child_elem(node, tags::HUMIDITY) {
-        if let Some(rh) =
+    if let Some(hum_node) = child_elem(node, tags::HUMIDITY)
+        && let Some(rh) =
             child_text(hum_node, tags::REL_HUMIDITY).and_then(|s| s.parse::<u8>().ok())
-        {
-            dev.humidity = Some(f64::from(rh));
-        }
+    {
+        dev.humidity = Some(f64::from(rh));
     }
 }
 
@@ -389,23 +388,23 @@ fn cross_link_hanfun_units(map: &mut BTreeMap<String, RawAhaDevice>) {
                 child.fw_version = p_snap.fw_version.clone();
             }
         }
-        if p_snap.raw_bitmask == fritz_bitmask::HAN_FUN_DEVICE {
-            if let Some(parent) = map.get_mut(&parent_ain) {
-                parent.subunit_ain = Some(child_ain);
-                parent.bitmask |= c_snap.bitmask;
-                parent.has_powermeter = parent.has_powermeter || c_snap.has_powermeter;
-                if parent.power_mw.is_none() {
-                    parent.power_mw = c_snap.power_mw;
-                }
-                if parent.energy_wh.is_none() {
-                    parent.energy_wh = c_snap.energy_wh;
-                }
-                if parent.voltage.is_none() {
-                    parent.voltage = c_snap.voltage;
-                }
-                if parent.switch_state.is_none() {
-                    parent.switch_state = c_snap.switch_state;
-                }
+        if p_snap.raw_bitmask == fritz_bitmask::HAN_FUN_DEVICE
+            && let Some(parent) = map.get_mut(&parent_ain)
+        {
+            parent.subunit_ain = Some(child_ain);
+            parent.bitmask |= c_snap.bitmask;
+            parent.has_powermeter = parent.has_powermeter || c_snap.has_powermeter;
+            if parent.power_mw.is_none() {
+                parent.power_mw = c_snap.power_mw;
+            }
+            if parent.energy_wh.is_none() {
+                parent.energy_wh = c_snap.energy_wh;
+            }
+            if parent.voltage.is_none() {
+                parent.voltage = c_snap.voltage;
+            }
+            if parent.switch_state.is_none() {
+                parent.switch_state = c_snap.switch_state;
             }
         }
     }

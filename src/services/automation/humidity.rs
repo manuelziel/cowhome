@@ -7,17 +7,16 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
-use super::actuation::{dispatch_thermostat_target, RULE_TEMP_EPSILON};
+use super::actuation::{RULE_TEMP_EPSILON, dispatch_thermostat_target};
 use super::humidity_helpers::{
-    build_humidity_scope_trace, build_scope_key, enrich_scope_psychrometrics,
+    ScopeClimate, build_humidity_scope_trace, build_scope_key, enrich_scope_psychrometrics,
     load_recent_sql_samples, outdoor_climate, resolve_scope_base_temp, resolve_scope_climate,
-    ScopeClimate,
 };
 use crate::core::domain_constants::automation::automation_defaults::{
     HUMIDITY_SAMPLE_RETENTION_SECS as SAMPLE_RETENTION_SECS, HUMIDITY_SUSTAIN_MINUTES,
 };
 use crate::core::logger::Logger;
-use crate::core::psychrometrics::{compute_climate_gradients, ClimateGradients, ClimateSample};
+use crate::core::psychrometrics::{ClimateGradients, ClimateSample, compute_climate_gradients};
 use crate::core::time_util::{normalize_ain, now_epoch_f64};
 use crate::db::Database;
 use crate::models::automation::HumidityControlConfig;
@@ -86,7 +85,7 @@ impl HumidityControlRule {
         let now = self.last_eval_ts.unwrap_or_else(now_epoch_f64);
         self.boost_until
             .iter()
-            .filter(|(_, &exp)| now < exp)
+            .filter(|&(_, &exp)| now < exp)
             .map(|(ain, _)| normalize_ain(ain))
             .collect()
     }
@@ -102,7 +101,7 @@ impl HumidityControlRule {
         let expired: Vec<String> = self
             .boost_until
             .iter()
-            .filter(|(ain, &exp)| now >= exp && !self.shielding_since.contains_key(*ain))
+            .filter(|&(ain, &exp)| now >= exp && !self.shielding_since.contains_key(ain))
             .map(|(ain, _)| ain.clone())
             .collect();
         for ain in expired {
@@ -171,15 +170,14 @@ impl HumidityControlRule {
                             t.temperature_target = target;
                         }
                     });
-                } else if (cur_t - target).abs() >= RULE_TEMP_EPSILON {
-                    if let Err(err) =
+                } else if (cur_t - target).abs() >= RULE_TEMP_EPSILON
+                    && let Err(err) =
                         dispatch_thermostat_target(&actor, target, registry, aha).await
-                    {
-                        self.logger.warning(&format!(
-                            "Failed releasing HumidityGuard on {}: {err}",
-                            actor.name
-                        ));
-                    }
+                {
+                    self.logger.warning(&format!(
+                        "Failed releasing HumidityGuard on {}: {err}",
+                        actor.name
+                    ));
                 }
             }
         }

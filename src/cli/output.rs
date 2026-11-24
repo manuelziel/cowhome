@@ -44,10 +44,10 @@ impl ConsolePrinter {
             .unwrap_or(true);
         if io::stderr().is_terminal() && term_ok {
             let mut err = io::stderr().lock();
-            if write!(err, "{ANSI_CLEAR_SCREEN}").is_ok() {
-                if let Err(_flush_err) = err.flush() {
-                    // Best-effort TTY clear; non-fatal if stream closed concurrently.
-                }
+            if write!(err, "{ANSI_CLEAR_SCREEN}").is_ok()
+                && let Err(_flush_err) = err.flush()
+            {
+                // Best-effort TTY clear; non-fatal if stream closed concurrently.
             }
         }
     }

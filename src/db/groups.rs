@@ -6,8 +6,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use rusqlite::{params, Connection, OptionalExtension};
-use serde_json::{json, Value};
+use rusqlite::{Connection, OptionalExtension, params};
+use serde_json::{Value, json};
 
 use super::Database;
 use crate::core::domain_constants::automation::automation_identifiers::{
@@ -273,12 +273,12 @@ impl Database {
         exclude_gid: Option<i64>,
     ) -> AppResult<()> {
         for ain in members {
-            if let Some((existing_id, existing_name)) = self.get_group_for_device(ain)? {
-                if Some(existing_id) != exclude_gid {
-                    return Err(AppError::Conflict(format!(
-                        "Device '{ain}' is already a member of group '{existing_name}' (id: {existing_id})"
-                    )));
-                }
+            if let Some((existing_id, existing_name)) = self.get_group_for_device(ain)?
+                && Some(existing_id) != exclude_gid
+            {
+                return Err(AppError::Conflict(format!(
+                    "Device '{ain}' is already a member of group '{existing_name}' (id: {existing_id})"
+                )));
             }
         }
         Ok(())

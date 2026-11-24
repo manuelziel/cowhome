@@ -19,9 +19,9 @@ use crate::core::constants::service_defaults::{
     DEFAULT_MAX_RETRIES, WORKER_MIN_SLEEP_SECS, WORKER_STARTUP_DELAY_SECS,
 };
 use crate::core::domain_constants::automation::weather_defaults::{
-    wmo_description, BASE_URL, CURRENT_VARS, DAILY_VARS, HOURLY_FORECAST_SLOTS, HOURLY_STEP_HOURS,
-    HOURLY_VARS, REQUEST_TIMEOUT_SECS, TIMEZONE, TIMEZONE_AUTO, UNKNOWN_WEATHER_CODE,
-    UPDATE_INTERVAL_SECS,
+    BASE_URL, CURRENT_VARS, DAILY_VARS, HOURLY_FORECAST_SLOTS, HOURLY_STEP_HOURS, HOURLY_VARS,
+    REQUEST_TIMEOUT_SECS, TIMEZONE, TIMEZONE_AUTO, UNKNOWN_WEATHER_CODE, UPDATE_INTERVAL_SECS,
+    wmo_description,
 };
 use crate::core::error::{AppError, AppResult};
 use crate::core::logger::Logger;
@@ -281,14 +281,13 @@ impl WeatherService {
         }
         if let Some(ref db) = self.db {
             db.set_default_timezone(&next_tz);
-            if let Some(hist_val) = snap.to_history_json() {
-                if let Err(err) = db
+            if let Some(hist_val) = snap.to_history_json()
+                && let Err(err) = db
                     .run_blocking(move |d| d.persist_weather_history(&hist_val, Some(now_ts)))
                     .await
-                {
-                    self.logger
-                        .error(&format!("Failed to persist weather history: {err}"));
-                }
+            {
+                self.logger
+                    .error(&format!("Failed to persist weather history: {err}"));
             }
         }
         self.logger.debug("Weather data updated successfully");
@@ -342,12 +341,11 @@ impl WeatherService {
         let allow_auto = cfg_trim.is_empty()
             || cfg_trim.eq_ignore_ascii_case(TIMEZONE_AUTO)
             || cfg_trim.eq_ignore_ascii_case(TIMEZONE);
-        if allow_auto {
-            if let Some(cand) = api_tz.map(str::trim).filter(|s| s.contains('/')) {
-                if cand.parse::<Tz>().is_ok() {
-                    return cand.to_owned();
-                }
-            }
+        if allow_auto
+            && let Some(cand) = api_tz.map(str::trim).filter(|s| s.contains('/'))
+            && cand.parse::<Tz>().is_ok()
+        {
+            return cand.to_owned();
         }
         self.get_timezone_name()
     }

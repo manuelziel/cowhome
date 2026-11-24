@@ -4,15 +4,13 @@
 //! `Dependencies`, `Internet`), and dynamically numbered context-sensitive options,
 //! delegating privileged mutations to [`super::setup_ops`].
 
-use std::borrow::Cow;
-
 use crate::cli::input::{
     read_menu_choice_once, resolve_menu_action, stdin_is_interactive, wait_for_enter,
 };
-use crate::cli::output::{write_stdout_line, ConsolePrinter};
+use crate::cli::output::{ConsolePrinter, write_stdout_line};
 pub use crate::cli::setup_args::SetupAction;
 use crate::cli::setup_ops::{
-    run_install, run_purge, run_reinstall, run_uninstall, run_update, SetupRunOpts,
+    SetupRunOpts, run_install, run_purge, run_reinstall, run_uninstall, run_update,
 };
 use crate::cli::status_view::{
     show_detailed_setup_status, show_detailed_version, show_setup_header_status,
@@ -63,14 +61,14 @@ const INSTALLED_MENU_ITEMS: &[(SetupMenuItem, &str)] = &[
     (SetupMenuItem::Reinstall, "Reinstall"),
     (SetupMenuItem::Uninstall, "Uninstall"),
     (SetupMenuItem::Purge, "Purge"),
-    (SetupMenuItem::DetailedStatus, "Detailed Status"),
+    (SetupMenuItem::DetailedStatus, "Status"),
 ];
 
 /// Dynamically numbered options shown before CowHome is installed.
 const UNINSTALLED_MENU_ITEMS: &[(SetupMenuItem, &str)] = &[
     (SetupMenuItem::Install, "Install"),
-    (SetupMenuItem::Requirements, "System Requirements"),
-    (SetupMenuItem::VersionInfo, "Version Information"),
+    (SetupMenuItem::Requirements, "Requirements"),
+    (SetupMenuItem::VersionInfo, "Version"),
 ];
 
 // =============================================================================
@@ -215,14 +213,7 @@ fn render_setup_menu_screen(
     printer.print_banner("Setup");
     show_setup_header_status(skip_deps, printer);
     eprintln!();
-    let labels: Vec<Cow<'_, str>> = items
-        .iter()
-        .map(|(item, lbl)| match item {
-            SetupMenuItem::Install => Cow::Owned(format!("{lbl} {SOFTWARE_NAME}")),
-            _ => Cow::Borrowed(*lbl),
-        })
-        .collect();
-    printer.print_menu(&labels, "Exit")
+    printer.print_action_menu(items, "Exit")
 }
 
 // =============================================================================

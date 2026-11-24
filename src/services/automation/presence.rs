@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::actuation::{dispatch_thermostat_target, RULE_TEMP_EPSILON};
+use super::actuation::{RULE_TEMP_EPSILON, dispatch_thermostat_target};
 use crate::core::domain_constants::{
     automation::automation_defaults::FROST_PROTECTION_TEMP,
     hardware::{device_types, fritz_api::MAX_THERMOSTAT_TEMP},
@@ -106,10 +106,10 @@ impl PresenceProfilingRule {
 
     /// Resolves active router MACs once per cycle via TR-064.
     async fn resolve_connected_macs(&mut self, tr064: &FritzTr064Client) -> HashSet<String> {
-        if self.in_engine_cycle {
-            if let Some(ref cached) = self.cycle_active_macs {
-                return cached.clone();
-            }
+        if self.in_engine_cycle
+            && let Some(ref cached) = self.cycle_active_macs
+        {
+            return cached.clone();
         }
         let fetched = match tr064.get_connected_hosts().await {
             Ok(hosts) => hosts
@@ -230,16 +230,17 @@ impl PresenceProfilingRule {
             let norm = normalize_ain(&dev.ain);
             self.setback_applied_base.remove(&norm);
             let restore = self.pre_setback_targets.remove(&norm);
-            if !dev.humidity_guard_active && scheduled_base.is_none() {
-                if let Some(temp) = restore.filter(|&t| t > 0.0) {
-                    self.logger
-                        .info(&format!("Presence restored on {} -> {temp}°C.", dev.name));
-                    if let Err(err) = dispatch_thermostat_target(&dev, temp, registry, aha).await {
-                        self.logger.warning(&format!(
-                            "Failed restoring presence target on {}: {err}",
-                            dev.name
-                        ));
-                    }
+            if !dev.humidity_guard_active
+                && scheduled_base.is_none()
+                && let Some(temp) = restore.filter(|&t| t > 0.0)
+            {
+                self.logger
+                    .info(&format!("Presence restored on {} -> {temp}°C.", dev.name));
+                if let Err(err) = dispatch_thermostat_target(&dev, temp, registry, aha).await {
+                    self.logger.warning(&format!(
+                        "Failed restoring presence target on {}: {err}",
+                        dev.name
+                    ));
                 }
             }
         }
@@ -254,10 +255,10 @@ async fn has_timeout_expired(tracked: &[String], timeout_minutes: u64, db: &Data
     let threshold = (timeout_minutes as f64) * 60.0;
     db.run_blocking(move |d| {
         for mac in &macs {
-            if let Ok(Some(last_seen)) = d.get_last_presence_seen(mac) {
-                if (now - last_seen) < threshold {
-                    return Ok(false);
-                }
+            if let Ok(Some(last_seen)) = d.get_last_presence_seen(mac)
+                && (now - last_seen) < threshold
+            {
+                return Ok(false);
             }
         }
         Ok(true)

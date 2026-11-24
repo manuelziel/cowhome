@@ -8,10 +8,10 @@ use std::fs;
 use std::path::Path;
 
 use rusqlite::params;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use super::schema::sidecar_path;
 use super::Database;
+use super::schema::sidecar_path;
 use crate::core::constants::fhs_paths::STATE_DIR;
 use crate::core::domain_constants::analytics::efficiency_defaults::SECONDS_PER_DAY;
 use crate::core::error::{AppError, AppResult};
@@ -153,10 +153,10 @@ fn read_sidecar_sizes(db_path: &Path) -> (u64, u64, u64) {
 // =============================================================================
 /// Resolves a valid existing directory to pass into `statvfs`.
 fn resolve_mount_dir(db_path: &Path) -> String {
-    if db_path.as_os_str() != ":memory:" {
-        if let Some(parent) = db_path.parent().filter(|p| p.exists()) {
-            return parent.display().to_string();
-        }
+    if db_path.as_os_str() != ":memory:"
+        && let Some(parent) = db_path.parent().filter(|p| p.exists())
+    {
+        return parent.display().to_string();
     }
     if Path::new(STATE_DIR).exists() {
         STATE_DIR.to_owned()

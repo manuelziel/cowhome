@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: CowHome API
   description: REST API for the CowHome Smart Home Hub. Acts as a digital twin for FritzBox connected devices.
-  version: 0.0.1
+  version: 0.0.2
   contact:
     name: Manuel Ziel
     email: ManuelZiel@gmail.com
@@ -1086,7 +1086,7 @@ components:
               example: CowHome
             version:
               type: string
-              example: "0.0.1"
+              example: "0.0.2"
             syslog_identifier:
               type: string
               example: cowhome
@@ -1121,6 +1121,7 @@ components:
               description: Target CPU architecture of the compiled single binary (e.g. 'x86_64' or 'aarch64').
             requested_range:
               type: string
+              enum: [24h, 7d, 30d, 90d, 180d, 365d, 1y, all]
               example: "24h"
             device_filter:
               type: string

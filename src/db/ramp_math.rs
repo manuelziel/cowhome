@@ -3,7 +3,7 @@
 //! Separates pure ramp/plateau state-machine algorithms from SQLite query orchestration
 //! in [`super::ramp_analytics`].
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::core::domain_constants::{
     analytics::{
@@ -44,10 +44,10 @@ pub(super) fn circulation_between_temps(
     curr_in: f64,
     curr_hw: Option<f64>,
 ) -> bool {
-    if let (Some(p_h), Some(c_h)) = (prev_hw, curr_hw) {
-        if (c_h - p_h) > FLOAT_EPSILON {
-            return true;
-        }
+    if let (Some(p_h), Some(c_h)) = (prev_hw, curr_hw)
+        && (c_h - p_h) > FLOAT_EPSILON
+    {
+        return true;
     }
     if curr_hw.is_some_and(|c_h| (c_h - curr_in) >= VALVE_WARM_DELTA_C) {
         return true;
@@ -253,11 +253,7 @@ fn evaluate_rising_step(anchor: RampSample, row: RampSample, rates: &mut Vec<f64
         }
         return row;
     }
-    if reached_tgt {
-        row
-    } else {
-        anchor
-    }
+    if reached_tgt { row } else { anchor }
 }
 
 // =============================================================================

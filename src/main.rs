@@ -7,22 +7,22 @@
 use std::path::Path;
 use std::process;
 
-use cowhome::cli::args::{parse_cli_args, print_help, print_version, CliCommand};
+use cowhome::cli::args::{CliCommand, parse_cli_args, print_help, print_version};
 use cowhome::cli::config_menu::run_config_menu;
 use cowhome::cli::fritz_test::run_fritz_connection_test;
-use cowhome::cli::import_export::{run_export, run_import, ExportRequest};
+use cowhome::cli::import_export::{ExportRequest, run_export, run_import};
 use cowhome::cli::input::stdin_is_interactive;
 use cowhome::cli::output::ConsolePrinter;
 use cowhome::cli::runtime_menu::{elevate_subcommand_via_sudo, run_runtime_menu};
 use cowhome::cli::setup_menu::execute_setup_action;
 use cowhome::cli::status_view::show_runtime_status;
 use cowhome::core::config::{
-    load_runtime_config, load_runtime_config_lenient, validate_config_file, AppConfig, DebugConfig,
+    AppConfig, DebugConfig, load_runtime_config, load_runtime_config_lenient, validate_config_file,
 };
 use cowhome::core::constants::app_meta::NAME;
 use cowhome::core::constants::cli_style::EXIT_SUCCESS;
 use cowhome::core::constants::fhs_paths::SYSTEMD_UNIT_NAME;
-use cowhome::core::diagnostics::{init_process_clock, DiagnosticsQuery};
+use cowhome::core::diagnostics::{DiagnosticsQuery, init_process_clock};
 use cowhome::core::error::{AppError, AppResult};
 use cowhome::core::logger::{LogLevel, Logger};
 use cowhome::core::process::install_signal_handlers;
@@ -181,7 +181,7 @@ fn run_config_cmd(
     match load_runtime_config(explicit_file) {
         Ok((cfg, path)) => {
             let (logger, cfg_printer) = build_runtime_context(&cfg, debug, true);
-            run_config_menu(&cfg, &path, &logger, cfg_printer)
+            run_config_menu(&cfg, &path, false, &logger, cfg_printer)
         }
         Err(AppError::Auth(_)) if stdin_is_interactive() => {
             elevate_subcommand_via_sudo("config", explicit_file, debug, printer)

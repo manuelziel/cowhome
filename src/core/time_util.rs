@@ -288,12 +288,11 @@ pub fn format_epoch_local_human(epoch_secs: u64) -> String {
 /// Reads the active OS timezone abbreviation (e.g., `"CET"`, `"CEST"`, `"UTC"`).
 #[must_use]
 pub fn current_os_timezone_abbr() -> String {
-    if let Some(tz) = detect_os_iana_tz() {
-        if let Some(abbr) = Utc::now().with_timezone(&tz).offset().abbreviation() {
-            if !abbr.is_empty() {
-                return abbr.to_owned();
-            }
-        }
+    if let Some(tz) = detect_os_iana_tz()
+        && let Some(abbr) = Utc::now().with_timezone(&tz).offset().abbreviation()
+        && !abbr.is_empty()
+    {
+        return abbr.to_owned();
     }
     let off_secs = Local::now().offset().fix().local_minus_utc();
     if off_secs == 0 {
@@ -307,10 +306,10 @@ pub fn current_os_timezone_abbr() -> String {
 // =============================================================================
 /// Detects the host IANA timezone from `TZ` or `/etc/localtime` symlink target.
 fn detect_os_iana_tz() -> Option<Tz> {
-    if let Ok(env_tz) = std::env::var("TZ") {
-        if let Ok(tz) = env_tz.trim().trim_start_matches(':').parse::<Tz>() {
-            return Some(tz);
-        }
+    if let Ok(env_tz) = std::env::var("TZ")
+        && let Ok(tz) = env_tz.trim().trim_start_matches(':').parse::<Tz>()
+    {
+        return Some(tz);
     }
     let Ok(link) = std::fs::read_link("/etc/localtime") else {
         return None;

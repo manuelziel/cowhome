@@ -1,8 +1,8 @@
 //! Section-level interactive editors for `cowhome config`.
 //!
-//! Groups configuration prompts into focused 2–5 field dialogs (`Server & API`,
-//! `FritzBox`, `Weather & Timezone`, and `System, Limits & Logging` with sub-selector)
-//! per `_project-resources/docs/design_guidelines.md` Progressive Disclosure rules.
+//! Groups configuration prompts into focused 2–5 field dialogs (`Server`,
+//! `FritzBox`, `Weather`, and `Limits` with sub-selector) per
+//! `_project-resources/docs/design_guidelines.md` Progressive Disclosure rules.
 
 use crate::cli::config_prompts::{
     prompt_api_key, prompt_bool_or_cancel, prompt_checked_host, prompt_checked_path,
@@ -16,7 +16,7 @@ use crate::core::error::AppResult;
 use crate::core::logger::LogLevel;
 
 // =============================================================================
-/// Typed sub-sections inside `System, Limits & Logging`.
+/// Typed sub-sections inside `Limits`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SystemSubsection {
     /// Edit sliding-window HTTP rate limiter bounds (`[rate_limit]`).
@@ -29,12 +29,12 @@ enum SystemSubsection {
     LoggingAndColors,
 }
 
-/// Sub-sections inside `System, Limits & Logging` so admins only edit what they need.
+/// Sub-sections inside `Limits` using concise M3 noun labels (`design_guidelines.md` § 8).
 const SYSTEM_SUBSECTIONS: &[(SystemSubsection, &str)] = &[
     (SystemSubsection::RateLimiting, "Rate Limiting"),
-    (SystemSubsection::AutomationAndDaemon, "Automation & Daemon"),
-    (SystemSubsection::DatabasePath, "Database Path"),
-    (SystemSubsection::LoggingAndColors, "Logging & Colors"),
+    (SystemSubsection::AutomationAndDaemon, "Automation"),
+    (SystemSubsection::DatabasePath, "Database"),
+    (SystemSubsection::LoggingAndColors, "Logging"),
 ];
 
 // =============================================================================
@@ -43,33 +43,33 @@ const SYSTEM_SUBSECTIONS: &[(SystemSubsection, &str)] = &[
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
 pub fn edit_server_and_api_section(
-    draft: &mut AppConfig,
+    working: &mut AppConfig,
     printer: ConsolePrinter,
-) -> AppResult<bool> {
-    printer.print_subsection("Server & API");
-    let Some((host, port, base_url)) = prompt_server_fields(draft, printer)? else {
-        return Ok(false);
+) -> AppResult<()> {
+    printer.print_subsection("Server");
+    let Some((host, port, base_url)) = prompt_server_fields(working, printer)? else {
+        return Ok(());
     };
-    let Some(api_key) = prompt_api_key(&draft.api.api_key, printer)? else {
-        return Ok(false);
+    let Some(api_key) = prompt_api_key(&working.api.api_key, printer)? else {
+        return Ok(());
     };
-    let Some(proxies) = prompt_trusted_proxies(&draft.api.trusted_proxies, printer)? else {
-        return Ok(false);
+    let Some(proxies) = prompt_trusted_proxies(&working.api.trusted_proxies, printer)? else {
+        return Ok(());
     };
-    let changed = host != draft.server.host
-        || port != draft.server.port
-        || base_url != draft.server.base_url
-        || api_key != draft.api.api_key
-        || proxies != draft.api.trusted_proxies;
-    draft.server.host = host;
-    draft.server.port = port;
-    draft.server.base_url = base_url;
-    draft.api.api_key = api_key;
-    draft.api.trusted_proxies = proxies;
+    let changed = host != working.server.host
+        || port != working.server.port
+        || base_url != working.server.base_url
+        || api_key != working.api.api_key
+        || proxies != working.api.trusted_proxies;
+    working.server.host = host;
+    working.server.port = port;
+    working.server.base_url = base_url;
+    working.api.api_key = api_key;
+    working.api.trusted_proxies = proxies;
     if changed {
-        printer.print_success("Updated Server & API settings.");
+        printer.print_success("Updated Server settings.");
     }
-    Ok(changed)
+    Ok(())
 }
 
 // =============================================================================
@@ -78,17 +78,18 @@ pub fn edit_server_and_api_section(
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
 fn prompt_server_fields(
-    draft: &AppConfig,
+    working: &AppConfig,
     printer: ConsolePrinter,
 ) -> AppResult<Option<(String, u16, String)>> {
-    let Some(host) = prompt_checked_host("Server bind address", &draft.server.host, printer)?
+    let Some(host) = prompt_checked_host("Server bind address", &working.server.host, printer)?
     else {
         return Ok(None);
     };
-    let Some(port) = prompt_positive_int("Server port", draft.server.port, printer)? else {
+    let Some(port) = prompt_positive_int("Server port", working.server.port, printer)? else {
         return Ok(None);
     };
-    let Some(base_url) = prompt_checked_url("External base URL", &draft.server.base_url, printer)?
+    let Some(base_url) =
+        prompt_checked_url("External base URL", &working.server.base_url, printer)?
     else {
         return Ok(None);
     };
@@ -100,39 +101,39 @@ fn prompt_server_fields(
 ///
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
-pub fn edit_fritzbox_section(draft: &mut AppConfig, printer: ConsolePrinter) -> AppResult<bool> {
+pub fn edit_fritzbox_section(working: &mut AppConfig, printer: ConsolePrinter) -> AppResult<()> {
     printer.print_subsection("FritzBox");
-    let Some(host) = prompt_checked_host("FritzBox host", &draft.fritzbox.host, printer)? else {
-        return Ok(false);
+    let Some(host) = prompt_checked_host("FritzBox host", &working.fritzbox.host, printer)? else {
+        return Ok(());
     };
-    let Some(username) = prompt_or_cancel("FritzBox username", Some(&draft.fritzbox.username))?
+    let Some(username) = prompt_or_cancel("FritzBox username", Some(&working.fritzbox.username))?
     else {
-        return Ok(false);
+        return Ok(());
     };
-    let Some(password) = prompt_masked_secret("FritzBox password", &draft.fritzbox.password)?
+    let Some(password) = prompt_masked_secret("FritzBox password", &working.fritzbox.password)?
     else {
-        return Ok(false);
+        return Ok(());
     };
     let Some(poll_interval) = prompt_positive_int(
         "Poll interval in seconds",
-        draft.fritzbox.poll_interval,
+        working.fritzbox.poll_interval,
         printer,
     )?
     else {
-        return Ok(false);
+        return Ok(());
     };
-    let changed = host != draft.fritzbox.host
-        || username != draft.fritzbox.username
-        || password != draft.fritzbox.password
-        || poll_interval != draft.fritzbox.poll_interval;
-    draft.fritzbox.host = host;
-    draft.fritzbox.username = username;
-    draft.fritzbox.password = password;
-    draft.fritzbox.poll_interval = poll_interval;
+    let changed = host != working.fritzbox.host
+        || username != working.fritzbox.username
+        || password != working.fritzbox.password
+        || poll_interval != working.fritzbox.poll_interval;
+    working.fritzbox.host = host;
+    working.fritzbox.username = username;
+    working.fritzbox.password = password;
+    working.fritzbox.poll_interval = poll_interval;
     if changed {
         printer.print_success("Updated FritzBox settings.");
     }
-    Ok(changed)
+    Ok(())
 }
 
 // =============================================================================
@@ -140,76 +141,80 @@ pub fn edit_fritzbox_section(draft: &mut AppConfig, printer: ConsolePrinter) -> 
 ///
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
-pub fn edit_weather_section(draft: &mut AppConfig, printer: ConsolePrinter) -> AppResult<bool> {
-    printer.print_subsection("Weather & Timezone");
+pub fn edit_weather_section(working: &mut AppConfig, printer: ConsolePrinter) -> AppResult<()> {
+    printer.print_subsection("Weather");
     let Some((lat, lon)) =
-        prompt_lat_lon(draft.weather.latitude, draft.weather.longitude, printer)?
+        prompt_lat_lon(working.weather.latitude, working.weather.longitude, printer)?
     else {
-        return Ok(false);
+        return Ok(());
     };
-    let Some(tz) = prompt_checked_timezone(&draft.weather.timezone, printer)? else {
-        return Ok(false);
+    let Some(tz) = prompt_checked_timezone(&working.weather.timezone, printer)? else {
+        return Ok(());
     };
     let Some((upd, days)) = prompt_weather_horizon(
-        draft.weather.update_interval,
-        draft.weather.forecast_days,
+        working.weather.update_interval,
+        working.weather.forecast_days,
         printer,
     )?
     else {
-        return Ok(false);
+        return Ok(());
     };
-    let changed = (lat - draft.weather.latitude).abs() > f64::EPSILON
-        || (lon - draft.weather.longitude).abs() > f64::EPSILON
-        || tz != draft.weather.timezone
-        || upd != draft.weather.update_interval
-        || days != draft.weather.forecast_days;
-    draft.weather.latitude = lat;
-    draft.weather.longitude = lon;
-    draft.weather.timezone = tz;
-    draft.weather.update_interval = upd;
-    draft.weather.forecast_days = days;
+    let changed = (lat - working.weather.latitude).abs() > f64::EPSILON
+        || (lon - working.weather.longitude).abs() > f64::EPSILON
+        || tz != working.weather.timezone
+        || upd != working.weather.update_interval
+        || days != working.weather.forecast_days;
+    working.weather.latitude = lat;
+    working.weather.longitude = lon;
+    working.weather.timezone = tz;
+    working.weather.update_interval = upd;
+    working.weather.forecast_days = days;
     if changed {
-        printer.print_success("Updated Weather & Timezone settings.");
+        printer.print_success("Updated Weather settings.");
     }
-    Ok(changed)
+    Ok(())
 }
 
 // =============================================================================
-/// Opens a focused sub-selector for `Rate Limiting`, `Automation`, `Database`, or `Logging`.
+/// Opens a focused sub-selector for `Rate Limiting`, `Automation`, `Database`, or `Logging`;
+/// returns `false` when `0) Cancel` is chosen so the caller skips `wait_for_enter`.
 ///
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
 pub fn edit_system_and_limits_section(
-    draft: &mut AppConfig,
+    working: &mut AppConfig,
     printer: ConsolePrinter,
 ) -> AppResult<bool> {
-    printer.print_subsection("System, Limits & Logging");
+    printer.print_subsection("Limits");
     let Some(selected) = prompt_action_from_list(SYSTEM_SUBSECTIONS, "Select section", printer)?
     else {
         return Ok(false);
     };
     eprintln!();
     match selected {
-        SystemSubsection::RateLimiting => edit_rate_limit_fields(draft, printer),
-        SystemSubsection::AutomationAndDaemon => edit_automation_and_daemon_fields(draft, printer),
-        SystemSubsection::DatabasePath => edit_database_path_field(draft, printer),
-        SystemSubsection::LoggingAndColors => edit_debug_section(draft, printer),
+        SystemSubsection::RateLimiting => edit_rate_limit_fields(working, printer)?,
+        SystemSubsection::AutomationAndDaemon => {
+            edit_automation_and_daemon_fields(working, printer)?;
+        }
+        SystemSubsection::DatabasePath => edit_database_path_field(working, printer)?,
+        SystemSubsection::LoggingAndColors => edit_debug_section(working, printer)?,
     }
+    Ok(true)
 }
 
 // =============================================================================
-/// Edits `draft.rate_limit` (`enabled`, `window`, `max_login_attempts`, `rpm`).
+/// Edits `working.rate_limit` (`enabled`, `window`, `max_login_attempts`, `rpm`).
 ///
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
-fn edit_rate_limit_fields(draft: &mut AppConfig, printer: ConsolePrinter) -> AppResult<bool> {
-    let before = draft.rate_limit.clone();
+fn edit_rate_limit_fields(working: &mut AppConfig, printer: ConsolePrinter) -> AppResult<()> {
+    let before = working.rate_limit.clone();
     let Some(rl_en) = prompt_bool_or_cancel("Enable rate limiting?", before.enabled)? else {
-        return Ok(false);
+        return Ok(());
     };
     let Some(win) = prompt_positive_int("Lockout window in seconds", before.window, printer)?
     else {
-        return Ok(false);
+        return Ok(());
     };
     let Some(logins) = prompt_positive_int(
         "Max failed logins per window",
@@ -217,7 +222,7 @@ fn edit_rate_limit_fields(draft: &mut AppConfig, printer: ConsolePrinter) -> App
         printer,
     )?
     else {
-        return Ok(false);
+        return Ok(());
     };
     let Some(rpm) = prompt_positive_int(
         "Max requests per minute per IP",
@@ -225,81 +230,80 @@ fn edit_rate_limit_fields(draft: &mut AppConfig, printer: ConsolePrinter) -> App
         printer,
     )?
     else {
-        return Ok(false);
+        return Ok(());
     };
-    draft.rate_limit.enabled = rl_en;
-    draft.rate_limit.window = win;
-    draft.rate_limit.max_login_attempts = logins;
-    draft.rate_limit.max_requests_per_minute_per_ip = rpm;
-    let changed = draft.rate_limit != before;
-    if changed {
+    working.rate_limit.enabled = rl_en;
+    working.rate_limit.window = win;
+    working.rate_limit.max_login_attempts = logins;
+    working.rate_limit.max_requests_per_minute_per_ip = rpm;
+    if working.rate_limit != before {
         printer.print_success("Updated Rate Limiting settings.");
     }
-    Ok(changed)
+    Ok(())
 }
 
 // =============================================================================
-/// Edits `draft.automation` (`interval`, `vacation_mode`) and `draft.daemon.enabled`.
+/// Edits `working.automation` (`interval`, `vacation_mode`) and `working.daemon.enabled`.
 ///
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
 fn edit_automation_and_daemon_fields(
-    draft: &mut AppConfig,
+    working: &mut AppConfig,
     printer: ConsolePrinter,
-) -> AppResult<bool> {
+) -> AppResult<()> {
     let Some(auto_int) = prompt_positive_int(
         "Rules evaluation interval in seconds",
-        draft.automation.interval,
+        working.automation.interval,
         printer,
     )?
     else {
-        return Ok(false);
+        return Ok(());
     };
     let Some(vac) = prompt_bool_or_cancel(
         "Enable global vacation mode?",
-        draft.automation.vacation_mode,
+        working.automation.vacation_mode,
     )?
     else {
-        return Ok(false);
+        return Ok(());
     };
     let Some(daemon_en) =
-        prompt_bool_or_cancel("Enable background workers?", draft.daemon.enabled)?
+        prompt_bool_or_cancel("Enable background workers?", working.daemon.enabled)?
     else {
-        return Ok(false);
+        return Ok(());
     };
-    let changed = auto_int != draft.automation.interval
-        || vac != draft.automation.vacation_mode
-        || daemon_en != draft.daemon.enabled;
-    draft.automation.interval = auto_int;
-    draft.automation.vacation_mode = vac;
-    draft.daemon.enabled = daemon_en;
+    let changed = auto_int != working.automation.interval
+        || vac != working.automation.vacation_mode
+        || daemon_en != working.daemon.enabled;
+    working.automation.interval = auto_int;
+    working.automation.vacation_mode = vac;
+    working.daemon.enabled = daemon_en;
     if changed {
-        printer.print_success("Updated Automation & Daemon settings.");
+        printer.print_success("Updated Automation settings.");
     }
-    Ok(changed)
+    Ok(())
 }
 
 // =============================================================================
-/// Edits `draft.database.db_path` with traversal validation.
+/// Edits `working.database.db_path` with traversal validation.
 ///
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
-fn edit_database_path_field(draft: &mut AppConfig, printer: ConsolePrinter) -> AppResult<bool> {
+fn edit_database_path_field(working: &mut AppConfig, printer: ConsolePrinter) -> AppResult<()> {
     let Some(db_path) = prompt_checked_path(
         "SQLite database path",
-        &draft.database.db_path,
+        &working.database.db_path,
         "database.db_path",
         printer,
     )?
     else {
-        return Ok(false);
+        return Ok(());
     };
-    let changed = db_path != draft.database.db_path;
-    draft.database.db_path = db_path;
+    let changed = db_path != working.database.db_path;
+    working.database.db_path = db_path;
     if changed {
-        printer.print_success("Updated Database path.");
+        printer.print_success("Updated Database settings.");
     }
-    Ok(changed)
+    Ok(())
 }
 
 // =============================================================================
@@ -307,26 +311,29 @@ fn edit_database_path_field(draft: &mut AppConfig, printer: ConsolePrinter) -> A
 ///
 /// # Errors
 /// Returns [`crate::core::error::AppError::Io`] on unrecoverable terminal stream errors.
-pub fn edit_debug_section(draft: &mut AppConfig, printer: ConsolePrinter) -> AppResult<bool> {
+pub fn edit_debug_section(working: &mut AppConfig, printer: ConsolePrinter) -> AppResult<()> {
     let parsed_lvl = loop {
-        let Some(raw_lvl) = prompt_or_cancel("Log level", Some(draft.debug.level.as_str()))? else {
-            return Ok(false);
+        let Some(raw_lvl) = prompt_or_cancel("Log level", Some(working.debug.level.as_str()))?
+        else {
+            return Ok(());
         };
         match LogLevel::parse_strict(&raw_lvl) {
             Ok(lvl) => break lvl,
             Err(err) => printer.print_error(&err.to_string()),
         }
     };
-    let Some(colors) =
-        prompt_bool_or_cancel("Enable colored console output?", draft.debug.console_colors)?
+    let Some(colors) = prompt_bool_or_cancel(
+        "Enable colored console output?",
+        working.debug.console_colors,
+    )?
     else {
-        return Ok(false);
+        return Ok(());
     };
-    let changed = parsed_lvl != draft.debug.level || colors != draft.debug.console_colors;
-    draft.debug.level = parsed_lvl;
-    draft.debug.console_colors = colors;
+    let changed = parsed_lvl != working.debug.level || colors != working.debug.console_colors;
+    working.debug.level = parsed_lvl;
+    working.debug.console_colors = colors;
     if changed {
-        printer.print_success("Updated Logging & Colors.");
+        printer.print_success("Updated Logging settings.");
     }
-    Ok(changed)
+    Ok(())
 }

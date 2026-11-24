@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use chrono::Utc;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use super::alerts::{
     build_full_health_checks, collect_active_alerts, resolve_overall_health_status,
@@ -23,8 +23,8 @@ use crate::core::constants::{
     diagnostics_defaults::{DEFAULT_LOG_LIMIT, MAX_LOG_LIMIT, SCHEMA_VERSION},
 };
 use crate::core::diagnostics::{
-    collect_recent_logs, process_uptime_seconds, redact_sensitive_json, validate_diagnostics_range,
-    DiagnosticsQuery,
+    DiagnosticsQuery, collect_recent_logs, process_uptime_seconds, redact_sensitive_json,
+    validate_diagnostics_range,
 };
 use crate::core::domain_constants::{
     automation::{
@@ -38,8 +38,8 @@ use crate::core::heating_forecast::ForecastDayInput;
 use crate::core::logger::Logger;
 use crate::core::psychrometrics::{calculate_absolute_humidity, calculate_dew_point};
 use crate::core::time_util::{current_os_timezone_abbr, now_utc_iso8601, resolve_home_tz};
-use crate::db::efficiency::AnalyticsContext;
 use crate::db::Database;
+use crate::db::efficiency::AnalyticsContext;
 use crate::models::registry::StateRegistry;
 use crate::services::automation::RulesEngine;
 use crate::services::rate_limiter::RateLimiter;

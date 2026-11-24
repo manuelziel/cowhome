@@ -67,10 +67,10 @@ impl FritzTr064Client {
         if primary.enabled || count < GUEST_WLAN_INDEX {
             return Ok(primary);
         }
-        if let Ok(secondary) = self.query_wlan_index(SECONDARY_WLAN_INDEX).await {
-            if secondary.enabled {
-                return Ok(secondary);
-            }
+        if let Ok(secondary) = self.query_wlan_index(SECONDARY_WLAN_INDEX).await
+            && secondary.enabled
+        {
+            return Ok(secondary);
         }
         Ok(primary)
     }
@@ -155,17 +155,13 @@ impl FritzTr064Client {
         if let Ok(map) = self
             .call_action("Hosts:1", "X_AVM-DE_GetHostListPath", &[])
             .await
-        {
-            if let Some(path) = map
+            && let Some(path) = map
                 .get("NewX_AVM-DE_HostListPath")
                 .filter(|s| !s.is_empty())
-            {
-                if let Ok(xml) = self.download_tr064_url(path).await {
-                    if let Ok(hosts) = parse_host_list_xml(&xml) {
-                        return Ok(hosts);
-                    }
-                }
-            }
+            && let Ok(xml) = self.download_tr064_url(path).await
+            && let Ok(hosts) = parse_host_list_xml(&xml)
+        {
+            return Ok(hosts);
         }
         self.fetch_hosts_generic_fallback().await
     }

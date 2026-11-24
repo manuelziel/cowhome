@@ -3,11 +3,11 @@
 //! Guarantees 100% wire compatibility with `assets/openapi.yaml` (`{"status": "success"|"error", ...}`),
 //! `RFC 6750` `WWW-Authenticate` challenges on `401`, and `RFC 6585` `Retry-After` headers on `429`.
 
-use axum::body::Bytes;
-use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
-use axum::response::{IntoResponse, Response};
 use axum::Json;
-use serde_json::{json, Map, Value};
+use axum::body::Bytes;
+use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
+use axum::response::{IntoResponse, Response};
+use serde_json::{Map, Value, json};
 
 use crate::core::constants::{
     route_paths::{HEADER_CLIENT_TIMESTAMP, HEADER_WWW_AUTHENTICATE, WWW_AUTH_BEARER_REALM},

@@ -127,13 +127,13 @@ pub(super) fn ensure_database_ownership(db_path: &Path, logger: &Logger) {
         sidecar_path(db_path, "-wal"),
         sidecar_path(db_path, "-shm"),
     ] {
-        if candidate.exists() {
-            if let Err(err) = apply_ownership_if_root(&candidate, SERVICE_USER, SERVICE_GROUP) {
-                logger.debug(&format!(
-                    "Skipped DB ownership handoff on '{}': {err}",
-                    candidate.display()
-                ));
-            }
+        if candidate.exists()
+            && let Err(err) = apply_ownership_if_root(&candidate, SERVICE_USER, SERVICE_GROUP)
+        {
+            logger.debug(&format!(
+                "Skipped DB ownership handoff on '{}': {err}",
+                candidate.display()
+            ));
         }
     }
 }
@@ -185,13 +185,12 @@ fn seed_automation_lww(conn: &Connection, out: &mut HashMap<String, f64>) {
 fn seed_groups_and_names_lww(conn: &Connection, out: &mut HashMap<String, f64>) {
     if let Ok(mut stmt) = conn.prepare(
         "SELECT group_id, CAST(strftime('%s', updated_at) AS REAL) FROM software_groups WHERE updated_at IS NOT NULL",
-    ) {
-        if let Ok(rows) = stmt.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<f64>>(1)?.unwrap_or(0.0)))) {
+    )
+        && let Ok(rows) = stmt.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<f64>>(1)?.unwrap_or(0.0)))) {
             for (gid, ts) in rows.flatten().filter(|&(_, ts)| ts > 0.0) {
                 out.insert(build_group_lww_key(gid), ts);
             }
         }
-    }
     for (sql, builder) in [
         (
             "SELECT ain, CAST(strftime('%s', updated_at) AS REAL) FROM device_custom_names WHERE updated_at IS NOT NULL",
@@ -202,13 +201,16 @@ fn seed_groups_and_names_lww(conn: &Connection, out: &mut HashMap<String, f64>) 
             build_setting_lww_key as fn(&str) -> String,
         ),
     ] {
-        if let Ok(mut stmt) = conn.prepare(sql) {
-            if let Ok(rows) = stmt.query_map([], |r| {
-                Ok((r.get::<_, String>(0)?, r.get::<_, Option<f64>>(1)?.unwrap_or(0.0)))
-            }) {
-                for (key, ts) in rows.flatten().filter(|&(_, ts)| ts > 0.0) {
-                    out.insert(builder(&key), ts);
-                }
+        if let Ok(mut stmt) = conn.prepare(sql)
+            && let Ok(rows) = stmt.query_map([], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, Option<f64>>(1)?.unwrap_or(0.0),
+                ))
+            })
+        {
+            for (key, ts) in rows.flatten().filter(|&(_, ts)| ts > 0.0) {
+                out.insert(builder(&key), ts);
             }
         }
     }

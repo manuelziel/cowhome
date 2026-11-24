@@ -23,8 +23,8 @@ use crate::core::domain_constants::{
 };
 use crate::core::error::AppResult;
 use crate::core::time_util::{normalize_ain, resolve_home_tz};
-use crate::db::efficiency::AnalyticsContext;
 use crate::db::Database;
+use crate::db::efficiency::AnalyticsContext;
 use crate::models::device::DeviceState;
 
 impl FritzPollingWorker {

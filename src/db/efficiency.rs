@@ -7,20 +7,21 @@
 use std::collections::HashMap;
 
 use rusqlite::params;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
+use super::Database;
 pub use super::efficiency_math::compute_weather_compensated_heating_rate;
 use super::efficiency_math::{
-    attach_forecast_fields, build_efficiency_payload, integrate_thermostat_samples,
-    IntegratedMetrics,
+    IntegratedMetrics, attach_forecast_fields, build_efficiency_payload,
+    integrate_thermostat_samples,
 };
 use super::entities_sync::deduplicate_ains_by_norm;
 use super::history::resolve_efficiency_window;
-use super::Database;
 use crate::core::domain_constants::{
     analytics::efficiency_defaults::{
-        FALLBACK_STEP_SECS, FORECAST_BASELINE_DAYS, FORECAST_SIGNATURE_DAYS, MINUTES_PER_HOUR,
-        MIN_BASELINE_HDD_KELVIN, MIN_DAYS_SPAN, SECONDS_PER_DAY, SECONDS_PER_MINUTE,
+        FALLBACK_STEP_SECS, FORECAST_BASELINE_DAYS, FORECAST_SIGNATURE_DAYS,
+        MIN_BASELINE_HDD_KELVIN, MIN_DAYS_SPAN, MINUTES_PER_HOUR, SECONDS_PER_DAY,
+        SECONDS_PER_MINUTE,
     },
     automation::automation_defaults::{DEFAULT_HEATING_RATE_MIN_PER_C, PREHEAT_REF_OUTDOOR_TEMP_C},
     hardware::{
@@ -29,8 +30,8 @@ use crate::core::domain_constants::{
     },
 };
 use crate::core::heating_forecast::{
-    aggregate_forecasts, build_device_forecast, DeviceForecastRequest, ForecastDayInput,
-    HeatingForecast,
+    DeviceForecastRequest, ForecastDayInput, HeatingForecast, aggregate_forecasts,
+    build_device_forecast,
 };
 use crate::core::psychrometrics::round_decimals;
 use crate::core::time_util::normalize_ain;
@@ -105,17 +106,14 @@ impl Database {
         if !resolved.is_empty() {
             let start_ts = resolved.iter().map(|r| r.1).fold(f64::INFINITY, f64::min);
             let end_ts = resolved.iter().map(|r| r.2).fold(0.0_f64, f64::max);
-            if let Ok(w_ent) = self.resolve_entity(WEATHER_AIN) {
-                if let Ok(samples) =
+            if let Ok(w_ent) = self.resolve_entity(WEATHER_AIN)
+                && let Ok(samples) =
                     self.fetch_bounded_history_rows(w_ent.entity_id, start_ts, end_ts)
-                {
-                    if samples
-                        .first()
-                        .is_some_and(|&(ts, _)| (end_ts - ts) >= FALLBACK_STEP_SECS)
-                    {
-                        ref_out = self.average_outdoor_from_samples(end_ts, &samples);
-                    }
-                }
+                && samples
+                    .first()
+                    .is_some_and(|&(ts, _)| (end_ts - ts) >= FALLBACK_STEP_SECS)
+            {
+                ref_out = self.average_outdoor_from_samples(end_ts, &samples);
             }
         }
         let (eff_rate, c_per_h, f_out) =
@@ -269,12 +267,11 @@ impl Database {
 
     /// Computes time-weighted average outdoor temperature (`°C`) over `[start_ts, end_ts]`.
     fn resolve_average_outdoor_temp(&self, start_ts: f64, end_ts: f64) -> f64 {
-        if let Ok(ent) = self.resolve_entity(WEATHER_AIN) {
-            if let Ok(samples) = self.fetch_bounded_history_rows(ent.entity_id, start_ts, end_ts) {
-                if !samples.is_empty() {
-                    return self.average_outdoor_from_samples(end_ts, &samples);
-                }
-            }
+        if let Ok(ent) = self.resolve_entity(WEATHER_AIN)
+            && let Ok(samples) = self.fetch_bounded_history_rows(ent.entity_id, start_ts, end_ts)
+            && !samples.is_empty()
+        {
+            return self.average_outdoor_from_samples(end_ts, &samples);
         }
         self.resolve_current_outdoor_temp(None)
             .unwrap_or(PREHEAT_REF_OUTDOOR_TEMP_C)

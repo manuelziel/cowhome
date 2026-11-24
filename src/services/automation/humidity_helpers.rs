@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::actuation::humidity_guard_states;
 use crate::core::domain_constants::{
@@ -22,9 +22,9 @@ use crate::core::domain_constants::{
     hardware::fritz_api::MIN_THERMOSTAT_TEMP,
 };
 use crate::core::psychrometrics::{
-    calculate_guard_temperature, calculate_projected_base_humidity,
-    calculate_wall_surface_humidity, compute_device_psychrometrics, ClimateSample,
-    DevicePsychrometricsInput, GuardTempParams,
+    ClimateSample, DevicePsychrometricsInput, GuardTempParams, calculate_guard_temperature,
+    calculate_projected_base_humidity, calculate_wall_surface_humidity,
+    compute_device_psychrometrics,
 };
 use crate::core::time_util::normalize_ain;
 use crate::db::Database;
@@ -53,18 +53,17 @@ pub(super) fn resolve_scope_climate(
     let fb_temp = (!actor_temps.is_empty())
         .then(|| actor_temps.iter().sum::<f64>() / (actor_temps.len() as f64));
 
-    if !config.sensor_ain.trim().is_empty() {
-        if let Some(s) = registry.get_device(&config.sensor_ain) {
-            if let Some(rh) = s.humidity {
-                let st = s
-                    .as_sensor()
-                    .and_then(|sf| sf.temperature_current)
-                    .or_else(|| s.as_thermostat().map(|t| t.temperature_current))
-                    .filter(|&v| v > 0.0)
-                    .or(fb_temp);
-                return (s.ain, st, Some(rh));
-            }
-        }
+    if !config.sensor_ain.trim().is_empty()
+        && let Some(s) = registry.get_device(&config.sensor_ain)
+        && let Some(rh) = s.humidity
+    {
+        let st = s
+            .as_sensor()
+            .and_then(|sf| sf.temperature_current)
+            .or_else(|| s.as_thermostat().map(|t| t.temperature_current))
+            .filter(|&v| v > 0.0)
+            .or(fb_temp);
+        return (s.ain, st, Some(rh));
     }
     let cands: Vec<DeviceState> = config
         .actor_ain
@@ -203,10 +202,10 @@ pub(super) fn resolve_scope_base_temp(
         return sb;
     }
     for ain in &config.actor_ain {
-        if let Some(dev) = registry.get_device(ain) {
-            if let Some(&saved) = previous_targets.get(&dev.ain) {
-                return saved;
-            }
+        if let Some(dev) = registry.get_device(ain)
+            && let Some(&saved) = previous_targets.get(&dev.ain)
+        {
+            return saved;
         }
     }
     for ain in &config.actor_ain {

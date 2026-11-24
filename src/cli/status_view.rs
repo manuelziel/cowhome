@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use crate::cli::output::{write_stdout_line, ConsolePrinter};
+use crate::cli::output::{ConsolePrinter, write_stdout_line};
 use crate::cli::status_live::render_live_cowhome_telemetry;
 use crate::core::config::AppConfig;
 use crate::core::constants::app_meta::{
@@ -21,10 +21,10 @@ use crate::core::constants::fhs_paths::{
 use crate::core::constants::service_defaults::ENABLE_DESKTOP_ENTRY;
 use crate::core::diagnostics::query_disk_space;
 use crate::core::logger::Logger;
-use crate::core::security::{probe_path_presence, PathPresence};
+use crate::core::security::{PathPresence, probe_path_presence};
 use crate::core::validation::{is_api_key_secure, mask_secret};
-use crate::setup::deps::{read_os_pretty_name, REQUIRED_DEPENDENCIES};
-use crate::setup::installer::{inspect_setup_status, SetupStatusReport};
+use crate::setup::deps::{REQUIRED_DEPENDENCIES, read_os_pretty_name};
+use crate::setup::installer::{SetupStatusReport, inspect_setup_status};
 
 // =============================================================================
 /// Displays *Active Configuration*, *Service & Storage Health*, and live device telemetry.

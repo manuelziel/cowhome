@@ -50,13 +50,13 @@ pub fn remove_service_account_on_purge(logger: &Logger, on_event: &mut dyn FnMut
         return;
     }
     let timeout = Duration::from_secs(SUBPROCESS_TIMEOUT_SECS);
-    if let Ok(out) = run_command_captured("userdel", &[SERVICE_USER], timeout) {
-        if out.success {
-            logger.info(&format!("Removed system user '{SERVICE_USER}'"));
-            on_event(SetupEvent::Completed(format!(
-                "Removed system user: {SERVICE_USER}"
-            )));
-        }
+    if let Ok(out) = run_command_captured("userdel", &[SERVICE_USER], timeout)
+        && out.success
+    {
+        logger.info(&format!("Removed system user '{SERVICE_USER}'"));
+        on_event(SetupEvent::Completed(format!(
+            "Removed system user: {SERVICE_USER}"
+        )));
     }
 }
 
@@ -203,10 +203,9 @@ fn add_supplementary_groups(
             "usermod",
             &["--append", "--groups", group, user_name],
             timeout,
-        ) {
-            if out.success {
-                logger.info(&format!("Added '{user_name}' to group '{group}'"));
-            }
+        ) && out.success
+        {
+            logger.info(&format!("Added '{user_name}' to group '{group}'"));
         }
     }
 }

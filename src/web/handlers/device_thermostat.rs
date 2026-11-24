@@ -26,8 +26,8 @@ use crate::core::psychrometrics::{
 use crate::core::time_util::now_epoch_f64;
 use crate::models::device::DeviceState;
 use crate::services::automation::actuation::{
-    can_defer_valve_to_offset_step, defer_twin_thermostat_target, OFFSET_HYSTERESIS_STEP,
-    RULE_TEMP_EPSILON,
+    OFFSET_HYSTERESIS_STEP, RULE_TEMP_EPSILON, can_defer_valve_to_offset_step,
+    defer_twin_thermostat_target,
 };
 use crate::web::response::{ApiError, ApiResult};
 use crate::web::state::AppState;
@@ -381,12 +381,12 @@ async fn apply_static_offset_to_twin_and_valve(state: &AppState, ain: &str, auth
             t.target_hold_until = now_epoch_f64() + TARGET_HOLD_SECONDS;
         }
     });
-    if let Some(desired_hw) = valve_cmd {
-        if let Err(err) = state.aha.set_target_temperature(ain, desired_hw).await {
-            state.logger.warning(&format!(
-                "Failed dispatching static-offset valve target {desired_hw}°C on {ain}: {err}"
-            ));
-        }
+    if let Some(desired_hw) = valve_cmd
+        && let Err(err) = state.aha.set_target_temperature(ain, desired_hw).await
+    {
+        state.logger.warning(&format!(
+            "Failed dispatching static-offset valve target {desired_hw}°C on {ain}: {err}"
+        ));
     }
 }
 
